@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+dist/
+*.egg-info/
+.env
+
+# Node / Frontend
+node_modules/
+dist/
+.DS_Store
+
+# DB & data files - no PII in git
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/

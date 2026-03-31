@@ -1,0 +1,257 @@
+{
+  "version": "1.0.0",
+  "description": "Ingredient safety watchlist for children. Sources: FDA 21 CFR, AAP 2018 Policy, CSPI Chemical Cuisine, WHO.",
+  "ingredients": [
+    {
+      "id": "red_3",
+      "name": "Red 3",
+      "aliases": ["erythrosine", "fd&c red 3", "fd&c red no. 3", "e127"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "organ_impact": ["thyroid"],
+      "flag_reason": "FDA banned in food (Jan 2025) after animal studies showed thyroid tumors. Linked to hyperactivity in children.",
+      "source_citation": "FDA 21 CFR Part 74; IARC Group 1 (animal carcinogen)"
+    },
+    {
+      "id": "red_40",
+      "name": "Red 40",
+      "aliases": ["allura red", "fd&c red 40", "fd&c red no. 40", "e129"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "behavior"],
+      "flag_reason": "AAP 2018: associated with hyperactivity and attention issues in children. Part of the 'Southampton Six' artificial food colors.",
+      "source_citation": "AAP Pediatrics 2018; CSPI Chemical Cuisine"
+    },
+    {
+      "id": "yellow_5",
+      "name": "Yellow 5",
+      "aliases": ["tartrazine", "fd&c yellow 5", "fd&c yellow no. 5", "e102"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "behavior"],
+      "flag_reason": "Southampton Six artificial dye. Linked to hyperactivity in children. EU requires warning label.",
+      "source_citation": "AAP Pediatrics 2018; EU Regulation EC 1333/2008"
+    },
+    {
+      "id": "yellow_6",
+      "name": "Yellow 6",
+      "aliases": ["sunset yellow", "fd&c yellow 6", "fd&c yellow no. 6", "e110"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "behavior"],
+      "flag_reason": "Southampton Six artificial dye. Hyperactivity concerns. EU warning label required.",
+      "source_citation": "AAP Pediatrics 2018; CSPI Chemical Cuisine"
+    },
+    {
+      "id": "blue_1",
+      "name": "Blue 1",
+      "aliases": ["brilliant blue", "fd&c blue 1", "fd&c blue no. 1", "e133"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["behavior"],
+      "flag_reason": "Artificial dye with potential hyperactivity link. CSPI: Caution for children.",
+      "source_citation": "CSPI Chemical Cuisine 2023"
+    },
+    {
+      "id": "blue_2",
+      "name": "Blue 2",
+      "aliases": ["indigo carmine", "fd&c blue 2", "fd&c blue no. 2", "e132"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["behavior"],
+      "flag_reason": "Artificial dye. Limited safety data for children. CSPI: Caution.",
+      "source_citation": "CSPI Chemical Cuisine 2023"
+    },
+    {
+      "id": "sodium_nitrate",
+      "name": "Sodium Nitrate",
+      "aliases": ["sodium nitrate", "e251"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["blood", "cardiovascular"],
+      "flag_reason": "AAP 2018: nitrates in cured meats convert to nitrosamines (potential carcinogens). Especially concerning under age 3.",
+      "source_citation": "AAP Pediatrics 2018; IARC Group 2A"
+    },
+    {
+      "id": "sodium_nitrite",
+      "name": "Sodium Nitrite",
+      "aliases": ["sodium nitrite", "e250"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["blood", "cardiovascular"],
+      "flag_reason": "Converts to nitrosamines in stomach. AAP recommends limiting cured/processed meats in children's diet.",
+      "source_citation": "AAP Pediatrics 2018; WHO IARC Group 2A"
+    },
+    {
+      "id": "bha",
+      "name": "BHA",
+      "aliases": ["butylated hydroxyanisole", "e320"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["liver", "thyroid"],
+      "flag_reason": "Reasonably anticipated human carcinogen (NTP). CSPI: Avoid. AAP 2018 listed as antioxidant preservative of concern.",
+      "source_citation": "NTP 15th Report on Carcinogens; CSPI Chemical Cuisine"
+    },
+    {
+      "id": "bht",
+      "name": "BHT",
+      "aliases": ["butylated hydroxytoluene", "e321"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["liver"],
+      "flag_reason": "Possible carcinogen in animal studies. CSPI: Caution. Some countries restrict in baby/children's food.",
+      "source_citation": "CSPI Chemical Cuisine 2023; NTP"
+    },
+    {
+      "id": "tbhq",
+      "name": "TBHQ",
+      "aliases": ["tertiary butylhydroquinone", "tert-butylhydroquinone", "e319"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["liver", "immune"],
+      "flag_reason": "Linked to immune system issues in animal studies. Very high doses caused tumors. CSPI: Avoid.",
+      "source_citation": "CSPI Chemical Cuisine; FDA 21 CFR 172.185"
+    },
+    {
+      "id": "carrageenan",
+      "name": "Carrageenan",
+      "aliases": ["carrageenan", "e407"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["gut"],
+      "flag_reason": "Linked to gut inflammation in animal studies. AAP 2018 listed as a concern. Particularly flagged for infant formula.",
+      "source_citation": "AAP Pediatrics 2018; Joanne Tobacman MD research"
+    },
+    {
+      "id": "titanium_dioxide",
+      "name": "Titanium Dioxide",
+      "aliases": ["titanium dioxide", "e171", "ci 77891"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["gut", "dna"],
+      "flag_reason": "IARC Group 2B (possible carcinogen). EU banned in food (2022). Gut microbiome disruption in animal studies.",
+      "source_citation": "IARC Group 2B; EU Regulation 2022/63"
+    },
+    {
+      "id": "potassium_bromate",
+      "name": "Potassium Bromate",
+      "aliases": ["potassium bromate", "e924"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "organ_impact": ["kidney", "dna"],
+      "flag_reason": "Probable human carcinogen (IARC Group 2B). Banned in EU, Canada, UK, India. Still legal in US. FDA urged voluntary ban.",
+      "source_citation": "IARC Group 2B; FDA advisory 1999; India FSS Act"
+    },
+    {
+      "id": "brominated_vegetable_oil",
+      "name": "Brominated Vegetable Oil",
+      "aliases": ["brominated vegetable oil", "bvo", "e443"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "organ_impact": ["thyroid", "neurological"],
+      "flag_reason": "FDA revoked GRAS status (2023). Bromine accumulates in fat and thyroid. Several countries have banned it.",
+      "source_citation": "FDA Federal Register 2023; CSPI"
+    },
+    {
+      "id": "high_fructose_corn_syrup",
+      "name": "High Fructose Corn Syrup",
+      "aliases": ["high fructose corn syrup", "hfcs", "corn syrup", "fructose syrup"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["liver", "metabolic"],
+      "flag_reason": "AAP: avoid added sugars entirely under age 2. HFCS contributes to obesity, insulin resistance, non-alcoholic fatty liver disease in children.",
+      "source_citation": "AAP 2016 Sugar Policy; WHO Free Sugars Guideline 2015"
+    },
+    {
+      "id": "saccharin",
+      "name": "Saccharin",
+      "aliases": ["saccharin", "sodium saccharin", "sweet'n low", "e954"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["gut", "metabolic"],
+      "flag_reason": "AAP 2019: non-nutritive sweeteners not recommended for children. Alters gut microbiome. Historical bladder cancer concerns.",
+      "source_citation": "AAP Pediatrics 2019 (nonnutritive sweeteners)"
+    },
+    {
+      "id": "acesulfame_potassium",
+      "name": "Acesulfame Potassium",
+      "aliases": ["acesulfame potassium", "acesulfame-k", "ace-k", "e950"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["gut", "metabolic"],
+      "flag_reason": "AAP 2019: non-nutritive sweeteners not recommended for children. Limited long-term safety data.",
+      "source_citation": "AAP Pediatrics 2019"
+    },
+    {
+      "id": "aspartame",
+      "name": "Aspartame",
+      "aliases": ["aspartame", "nutrasweet", "equal", "e951"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "metabolic"],
+      "flag_reason": "AAP 2019: non-nutritive sweeteners not recommended for children. IARC classified as possibly carcinogenic (Group 2B, 2023).",
+      "source_citation": "AAP Pediatrics 2019; IARC 2023"
+    },
+    {
+      "id": "sodium_benzoate",
+      "name": "Sodium Benzoate",
+      "aliases": ["sodium benzoate", "benzoate of soda", "e211"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "behavior"],
+      "flag_reason": "Combines with Vitamin C to form benzene (carcinogen). AAP 2018: hyperactivity link in children especially with artificial dyes.",
+      "source_citation": "AAP Pediatrics 2018; FDA benzene study 2006"
+    },
+    {
+      "id": "msg",
+      "name": "Monosodium Glutamate",
+      "aliases": ["monosodium glutamate", "msg", "e621", "glutamate"],
+      "severity": "low",
+      "age_min_flag_months": 12,
+      "organ_impact": ["brain"],
+      "flag_reason": "FDA GRAS but adds to sodium load. Some sensitivity reported. Not recommended for infants under 12 months.",
+      "source_citation": "FDA GRAS Notice; WHO"
+    },
+    {
+      "id": "propyl_gallate",
+      "name": "Propyl Gallate",
+      "aliases": ["propyl gallate", "e310"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["liver", "endocrine"],
+      "flag_reason": "Possible estrogenic activity. CSPI: Caution. Animal studies show tumor promotion at high doses.",
+      "source_citation": "CSPI Chemical Cuisine; NTP"
+    },
+    {
+      "id": "honey_under_1yr",
+      "name": "Honey",
+      "aliases": ["honey", "raw honey", "organic honey"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "age_max_flag_months": 12,
+      "organ_impact": ["neurological"],
+      "flag_reason": "ABSOLUTE risk: Clostridium botulinum spores in honey cause infant botulism. Strictly avoid under 12 months. No exceptions.",
+      "source_citation": "CDC Infant Botulism; AAP Bright Futures; FDA"
+    },
+    {
+      "id": "partially_hydrogenated_oils",
+      "name": "Partially Hydrogenated Oils",
+      "aliases": ["partially hydrogenated", "partially hydrogenated oil", "partially hydrogenated vegetable oil", "trans fat"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "organ_impact": ["cardiovascular", "metabolic"],
+      "flag_reason": "FDA banned trans fats (2018). Partially hydrogenated oils are the primary source. No safe level for children.",
+      "source_citation": "FDA Final Determination 2015; WHO REPLACE 2018"
+    },
+    {
+      "id": "artificial_sweeteners_generic",
+      "name": "Artificial Sweeteners",
+      "aliases": ["sucralose", "splenda", "e955"],
+      "severity": "medium",
+      "age_min_flag_months": 0,
+      "organ_impact": ["gut", "metabolic"],
+      "flag_reason": "AAP 2019: non-nutritive sweeteners should be avoided in children. Sucralose alters gut microbiome in animal studies.",
+      "source_citation": "AAP Pediatrics 2019"
+    }
+  ]
+}
