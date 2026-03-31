@@ -33,6 +33,8 @@ function scoreColor(score) {
 
 export function renderResult(apiResponse) {
   const { product, score: result } = apiResponse;
+  const demoMode = apiResponse.demo_mode || false;
+  const dataSource = apiResponse.data_source || 'scan';
   if (!product) return;
 
   const child = getCurrentChild();
@@ -63,7 +65,16 @@ export function renderResult(apiResponse) {
   if (el('result-product-brand')) el('result-product-brand').textContent = `${product.subtitle || ''} \u00b7 ${product.brand || ''}`.replace(/^ \u00b7 /, '');
   if (el('result-tag-type')) el('result-tag-type').textContent = `\ud83d\udce6 ${product.category || 'Product'}`;
   if (el('result-tag-age')) el('result-tag-age').textContent = `${emoji} ${age}`;
-  if (el('result-tag-source')) el('result-tag-source').textContent = `\ud83d\udd2c ${(result && result.scan_source) || 'Scan'}`;
+  // Source tag — show data origin + demo badge
+  const sourceLabel = demoMode ? '📦 Demo data'
+    : dataSource === 'open_food_facts' ? '🌍 Open Food Facts'
+    : dataSource === 'usda_fdc' ? '🏛 USDA FDC'
+    : dataSource === 'cache' ? '⚡ Cached'
+    : `🔬 ${(result && result.scan_source) || 'Scan'}`;
+  if (el('result-tag-source')) {
+    el('result-tag-source').textContent = sourceLabel;
+    if (demoMode) el('result-tag-source').style.cssText = 'background:var(--saffron-light);color:var(--saffron);border-radius:999px;';
+  }
 
   // Child lens
   const lens = document.getElementById('child-lens-text');

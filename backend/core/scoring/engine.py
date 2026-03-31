@@ -20,23 +20,32 @@ from .dimensions import (
 )
 
 
-# Dimension weights — must sum to 1.0
+# Dimension weights from PRD Section 3.1 — must sum to 1.0
+# Nutrition 35%, Ingredients 35%, Processing 20%, Age Safety 10%
 WEIGHTS = {
     "nutrition": 0.35,
-    "ingredients": 0.25,
+    "ingredients": 0.35,
     "processing": 0.20,
-    "age_safety": 0.20,
+    "age_safety": 0.10,
 }
 
 
 def _grade_from_score(score: int) -> Grade:
+    """Grade thresholds per PRD Section 3.2."""
     if score >= 80:
-        return Grade.A
+        return Grade.A   # Good for regular use
     if score >= 65:
-        return Grade.B
-    if score >= 50:
-        return Grade.C
-    return Grade.D
+        return Grade.B   # Fine a few times a week
+    if score >= 45:
+        return Grade.C   # Occasional treat only
+    return Grade.D       # Consider skipping
+
+
+# Hard-gate ingredient IDs — these cap the overall score at 40
+# regardless of other dimensions (PRD Section 3.1 Critical Rule)
+_HARD_GATE_IDS = {"honey_under_1yr", "partially_hydrogenated_oils",
+                   "brominated_vegetable_oil", "potassium_bromate",
+                   "whole_nuts_under_4yr"}
 
 
 def _check_watchlist(ingredients_text: str, child: ChildProfile) -> list[IngredientFlag]:
@@ -70,6 +79,11 @@ def _check_watchlist(ingredients_text: str, child: ChildProfile) -> list[Ingredi
         ))
 
     return flags
+
+
+def _has_hard_gate_trigger(flags: list[IngredientFlag]) -> bool:
+    """Return True if any flag is a PRD hard gate (caps overall score to 40)."""
+    return any(f.code in _HARD_GATE_IDS for f in flags)
 
 
 def _age_band_to_months(age_band_label: str) -> int:
@@ -154,6 +168,12 @@ def score_product(child: ChildProfile, product: Product) -> ScoreResult:
         + WEIGHTS["age_safety"] * age_safety_score,
         0, 100,
     )
+
+    # PRD Section 3.1 Critical Rule: hard gate caps score at 40
+    # Prevents high nutrition score masking an age-unsafe product.
+    hard_gate_triggered = _has_hard_gate_trigger(all_ingredient_flags + watchlist_flags)
+    if hard_gate_triggered:
+        overall = min(overall, 40)
 
     grade = _grade_from_score(overall)
     all_insights = nutrient_insights + sugar_insights

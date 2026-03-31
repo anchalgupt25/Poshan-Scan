@@ -213,6 +213,57 @@
       "source_citation": "FDA GRAS Notice; WHO"
     },
     {
+      "id": "green_3",
+      "name": "Green 3",
+      "aliases": ["fast green", "fd&c green 3", "fd&c green no. 3", "e143"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["brain", "behavior"],
+      "flag_reason": "Artificial food dye linked to hyperactivity in children. Part of the group of artificial colors AAP recommends minimizing.",
+      "source_citation": "AAP Pediatrics 2018; CSPI Chemical Cuisine"
+    },
+    {
+      "id": "whole_nuts_under_4yr",
+      "name": "Whole Nuts / Hard Chunks",
+      "aliases": ["whole almonds", "whole cashews", "whole peanuts", "whole walnuts", "whole pecans", "whole hazelnuts", "tree nuts"],
+      "severity": "hard_stop",
+      "age_min_flag_months": 0,
+      "age_max_flag_months": 48,
+      "organ_impact": ["respiratory"],
+      "flag_reason": "HARD STOP: Choking hazard. AAP/CDC: No whole nuts or hard chunks for children under 4 years (48 months). Scores capped at 40 for this age group.",
+      "source_citation": "AAP Choking Prevention Policy; CDC Choking Hazard Guidelines"
+    },
+    {
+      "id": "perchlorate",
+      "name": "Perchlorate",
+      "aliases": ["perchlorate"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["thyroid", "brain"],
+      "flag_reason": "Disrupts thyroid function and early brain development. Used as antistatic agent in dry food packaging. FDA and AAP 2018 identified as significant child health concern.",
+      "source_citation": "AAP Pediatrics 2018; FDA Perchlorate Action Level"
+    },
+    {
+      "id": "bpa",
+      "name": "BPA (Bisphenol A)",
+      "aliases": ["bisphenol a", "bpa", "bpa-free lined"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["endocrine", "brain", "reproductive"],
+      "flag_reason": "Endocrine disruptor. FDA banned from baby bottles and sippy cups. May still appear in can linings. AAP 2018: significant concern for children's hormonal and brain development.",
+      "source_citation": "FDA Final Rule 2012; AAP Pediatrics 2018"
+    },
+    {
+      "id": "phthalates",
+      "name": "Phthalates",
+      "aliases": ["phthalate", "dibutyl phthalate", "dehp", "dbp"],
+      "severity": "high",
+      "age_min_flag_months": 0,
+      "organ_impact": ["endocrine", "reproductive", "brain"],
+      "flag_reason": "Antiandrogenic chemicals found in plasticizers and adhesives used in food processing. AAP identified as significant child health concern in 2018. Linked to neurodevelopmental issues.",
+      "source_citation": "AAP Pediatrics 2018; CPSC Phthalate Restrictions"
+    },
+    {
       "id": "propyl_gallate",
       "name": "Propyl Gallate",
       "aliases": ["propyl gallate", "e310"],

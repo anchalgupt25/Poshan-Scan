@@ -11,6 +11,13 @@ let _lastScanId = null;
 
 // ─── Navigation ───
 
+// Nav-item IDs per screen (for bottom-nav active state)
+const NAV_ACTIVE = {
+  home: 'nav-home', scan: 'nav-home', scanner: 'nav-home',
+  scanning: 'nav-home', result: 'nav-home', search: 'nav-home',
+  history: 'nav-history', profile: 'nav-profile',
+};
+
 export function goScreen(id) {
   stopBarcodeScanner(); // always stop camera when leaving scanner
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
@@ -20,6 +27,10 @@ export function goScreen(id) {
     const scrollable = target.querySelector('.scrollable');
     if (scrollable) scrollable.scrollTop = 0;
   }
+  // Update bottom nav active state on all nav bars
+  const activeNav = NAV_ACTIVE[id] || 'nav-home';
+  document.querySelectorAll('.nav-item').forEach((el) => el.classList.remove('on'));
+  document.querySelectorAll(`[data-nav="${activeNav}"]`).forEach((el) => el.classList.add('on'));
   if (id === 'history') loadHistory();
   if (id === 'profile') loadProfileStats();
 }
@@ -173,12 +184,16 @@ export async function logDecision(decision) {
 function updateLocalHistory(decision) {
   const last = window._lastScanResult;
   if (!last) return;
+  const topFlag = last.score && last.score.flags && last.score.flags.length
+    ? last.score.flags[0].title
+    : null;
   let hist = JSON.parse(localStorage.getItem('poshanHistory') || '[]');
   hist.unshift({
     name: last.product.name,
     brand: last.product.brand,
     score: last.score ? last.score.score : null,
     grade: last.score ? last.score.grade : '?',
+    topFlag,
     decision,
     time: new Date().toISOString(),
   });
@@ -209,13 +224,40 @@ export function renderHomeHistory() {
         <div class="rc-name">${entry.name || 'Scanned product'}</div>
         <div class="rc-brand">${entry.brand || ''} \u00b7 ${entry.decision === 'give' ? '\u2713 Gave' : '\u2715 Skipped'}</div>
         <div class="rc-flags">
-          <div class="rc-flag ${entry.score >= 65 ? 'fok' : entry.score >= 50 ? 'fw' : 'fb'}">
+          <div class="rc-flag ${entry.score >= 65 ? 'fok' : entry.score >= 45 ? 'fw' : 'fb'}">
             ${entry.score != null ? `${entry.score}/100` : 'No score'}
           </div>
         </div>
       </div>
       <div class="rc-arr">\u203a</div>
     </div>`).join('');
+}
+
+function _buildPatternCard(items) {
+  if (!items.length) return '';
+  const child = getCurrentChild();
+  const name = child ? child.name : 'your child';
+  // Last 7 days
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const week = items.filter((x) => x.time >= cutoff);
+  if (!week.length) return '';
+  const withScores = week.filter((x) => x.score != null);
+  const avg = withScores.length
+    ? Math.round(withScores.reduce((s, x) => s + x.score, 0) / withScores.length)
+    : null;
+  const concerns = week.flatMap((x) => x.topFlag ? [x.topFlag] : []);
+  const topConcern = concerns.length
+    ? concerns.sort((a, b) => concerns.filter((c) => c === b).length - concerns.filter((c) => c === a).length)[0]
+    : 'ultra-processing';
+  const avgColor = avg == null ? 'var(--slate)' : avg >= 65 ? 'var(--forest)' : avg >= 45 ? 'var(--saffron)' : 'var(--rose)';
+  return `
+    <div class="pattern-card">
+      <div class="pc-label">📈 This week&rsquo;s pattern</div>
+      <div class="pc-text">${name}&rsquo;s scans average
+        <span style="color:${avgColor};font-weight:800;">${avg != null ? avg + '/100' : '—'}</span> this week.
+        ${topConcern ? `${topConcern} is the most common concern — flagged in ${concerns.filter((c) => c === topConcern).length} of ${week.length} product${week.length > 1 ? 's' : ''}.` : ''}
+      </div>
+    </div>`;
 }
 
 async function loadHistory() {
@@ -233,7 +275,7 @@ async function loadHistory() {
             <div class="rc-info"><div class="rc-name">${e.name || 'Product'}</div>
             <div class="rc-brand">${e.score != null ? `${e.score}/100` : ''} \u00b7 ${e.decision || ''}</div></div>
             <div class="rc-arr">\u203a</div>
-          </div>`).join('')
+          </div>`).join('') + _buildPatternCard(items)
       : '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No scan history yet.</div>';
     return;
   }

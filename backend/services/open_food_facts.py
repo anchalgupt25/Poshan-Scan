@@ -2,14 +2,29 @@
 
 Docs: https://world.openfoodfacts.org/data
 No API key required. Rate limit: reasonable use.
+
+Proxy: reads HTTP_PROXY / HTTPS_PROXY from environment automatically.
+Set POSHAN_DEMO_MODE=1 to skip real API calls and return None (trigger demo fallback).
 """
 from __future__ import annotations
 
+import os
 import httpx
 from ..models.product import Product, NutritionFacts, NovaGroup
 
 BASE_URL = "https://world.openfoodfacts.org/api/v2/product"
 USER_AGENT = "PoshanScan/0.1 (child-food-scoring; contact@poshanapp.com)"
+
+# Respect HTTP_PROXY / HTTPS_PROXY environment variables (needed on Walmart corp network)
+_PROXIES: dict | None = None
+_http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+_https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+if _http_proxy or _https_proxy:
+    _PROXIES = {}
+    if _http_proxy:
+        _PROXIES["http://"] = _http_proxy
+    if _https_proxy:
+        _PROXIES["https://"] = _https_proxy
 
 ARTIFICIAL_DYE_TAGS = {
     "en:e102", "en:e104", "en:e110", "en:e122", "en:e124", "en:e129",
@@ -64,6 +79,9 @@ def _has_artificial_dyes(additives_tags: list[str]) -> bool:
 
 async def lookup_barcode(barcode: str) -> Product | None:
     """Fetch product from Open Food Facts by barcode. Returns None if not found."""
+    if os.getenv("POSHAN_DEMO_MODE"):
+        return None  # Demo mode: skip real API, let scan.py use demo data
+
     url = f"{BASE_URL}/{barcode}.json"
     params = {
         "fields": (
@@ -71,7 +89,11 @@ async def lookup_barcode(barcode: str) -> Product | None:
             "nutriments,nova_group,additives_tags,ingredients_text,image_url"
         )
     }
-    async with httpx.AsyncClient(timeout=8.0) as client:
+    client_kwargs: dict = {"timeout": 8.0}
+    if _PROXIES:
+        client_kwargs["proxies"] = _PROXIES
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
         try:
             resp = await client.get(url, params=params, headers={"User-Agent": USER_AGENT})
             resp.raise_for_status()

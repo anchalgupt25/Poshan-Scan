@@ -17,8 +17,10 @@ from ...models.product import Product, NutritionFacts, OcrScanRequest, NovaGroup
 from ...models.score import ScoreResult
 from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_field
 from ...services import open_food_facts, usda_fdc
+from ...services.demo_products import lookup_demo_barcode, search_demo_products
 from ...core.scoring.engine import score_product
 from ...models.child import ChildProfile
+import os
 
 router = APIRouter(prefix="/scan", tags=["scan"])
 
@@ -107,6 +109,11 @@ async def scan_barcode(
             product = await usda_fdc.lookup_barcode(barcode)
             source = "usda_fdc"
 
+        # 4. Demo-mode fallback (corporate network / offline dev)
+        if not product:
+            product = lookup_demo_barcode(barcode)
+            source = "demo"
+
         if not product:
             raise HTTPException(status_code=404, detail="Product not found in any database")
 
@@ -128,6 +135,8 @@ async def scan_barcode(
         return {
             "product": product.model_dump(),
             "score": result.model_dump() if result else None,
+            "data_source": source,
+            "demo_mode": source == "demo",
         }
     finally:
         await db.close()
@@ -166,10 +175,13 @@ async def search_products(
     q: str = Query(..., min_length=2),
     child_id: Optional[int] = Query(default=None),
 ) -> dict:
-    """Manual product name search via USDA FDC."""
+    """Manual product name search via USDA FDC (demo fallback when offline)."""
     products = await usda_fdc.search_by_name(q, page_size=8)
+    # Demo fallback if USDA unreachable
     if not products:
-        return {"products": [], "scores": []}
+        products = search_demo_products(q)
+    if not products:
+        return {"products": [], "scores": [], "note": "No products found. Try a different name."}
 
     db = await get_db()
     try:

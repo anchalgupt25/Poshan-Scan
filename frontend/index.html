@@ -168,7 +168,7 @@
       </div>
     </div>
     <div style="padding:0 24px 32px;">
-      <button class="btn-primary" onclick="saveProfile(); goHome()">&#128302; Start Scanning →</button>
+      <button class="btn-primary" onclick="saveProfile()">&#128302; Start Scanning →</button>
     </div>
   </div>
 
@@ -214,9 +214,9 @@
       <div id="home-recent-list"></div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item on" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('profile')"><div class="nav-i" id="nav-avatar">👧</div><div class="nav-l" id="nav-child-name">Profile</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="nav-avatar">👧</div><div class="nav-l" id="nav-child-name">Profile</div><div class="nav-b"></div></div>
     </div>
   </div>
 
@@ -322,9 +322,9 @@
       <div style="height:14px;"></div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item on" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('profile')"><div class="nav-i" id="result-nav-avatar">👧</div><div class="nav-l" id="result-nav-name">Profile</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="result-nav-avatar">👧</div><div class="nav-l" id="result-nav-name">Profile</div><div class="nav-b"></div></div>
     </div>
   </div>
 
@@ -338,9 +338,9 @@
       <div id="history-list"></div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
-      <div class="nav-item on"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('profile')"><div class="nav-i" id="hist-nav-avatar">👧</div><div class="nav-l" id="hist-nav-name">Profile</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-history"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="hist-nav-avatar">👧</div><div class="nav-l" id="hist-nav-name">Profile</div><div class="nav-b"></div></div>
     </div>
   </div>
 
@@ -369,9 +369,9 @@
       </div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
-      <div class="nav-item" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
-      <div class="nav-item on"><div class="nav-i" id="profile-nav-avatar">👧</div><div class="nav-l" id="profile-nav-name">Profile</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-profile"><div class="nav-i" id="profile-nav-avatar">👧</div><div class="nav-l" id="profile-nav-name">Profile</div><div class="nav-b"></div></div>
     </div>
   </div>
 
