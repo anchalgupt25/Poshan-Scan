@@ -2,7 +2,8 @@
  * Real barcode scanner using @zxing/browser.
  * Opens the device camera and decodes barcodes continuously.
  */
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { NotFoundException } from '@zxing/library';
 
 let reader = null;
 let stopFn = null;
