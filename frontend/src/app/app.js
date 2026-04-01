@@ -5,6 +5,7 @@
 import { saveProfile, loadProfile, applyProfileToUi, getCurrentChild, collectProfileFromDom } from './profile.js';
 import { renderResult } from './result.js';
 import { startBarcodeScanner, stopBarcodeScanner } from '../scanner/barcode.js';
+import { showPhotoScanSheet } from '../scanner/photo-scan.js';
 import { scanBarcode, scanOcr, searchProducts, getScanHistory, logDecisionApi } from '../api/client.js';
 
 let _lastScanId = null;
@@ -75,12 +76,15 @@ export function skipToApp() {
 // ─── Onboarding helpers (called from inline onclick) ───
 
 export function selOne(el, group) {
+  // Only deselect siblings in the immediate parent container (not the whole screen)
   el.parentElement.querySelectorAll('.age-card, .chip').forEach((c) => c.classList.remove('on'));
   el.classList.add('on');
 }
 
 export function selAge(el) {
-  document.querySelectorAll('#ob2 .age-card').forEach((c) => c.classList.remove('on'));
+  // Scope ONLY to the age-grid, never touch gender cards
+  const grid = el.closest('.age-grid') || document.querySelector('#ob2 .age-grid');
+  if (grid) grid.querySelectorAll('.age-card').forEach((c) => c.classList.remove('on'));
   el.classList.add('on');
 }
 
@@ -121,13 +125,10 @@ export async function startScan(mode) {
       (msg) => { if (status) status.textContent = msg; },
     );
   } else if (mode === 'label') {
-    // Trigger file picker for photo label
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
-    input.onchange = async () => {
-      showError('OCR scanning coming soon! Use the Element LLM Gateway key to enable it.', 4000);
-    };
-    input.click();
+    showPhotoScanSheet({
+      onBarcode: (bc) => lookupAndScore(bc, 'barcode'),
+      onSearch:  (q)  => { goScreen('search'); _runSearchQuery(q); },
+    });
   }
 }
 
@@ -167,6 +168,7 @@ async function lookupAndScore(barcode, source) {
     animateStep('step-flags', false, true);
 
     renderResult(data);
+    autoSaveHistory(data);   // ← persist immediately, no decision needed
     goScreen('result');
     renderHomeHistory();
   } catch (err) {
@@ -196,23 +198,28 @@ export async function logDecision(decision) {
   goScreen('home');
 }
 
-function updateLocalHistory(decision) {
-  const last = window._lastScanResult;
-  if (!last) return;
-  const topFlag = last.score && last.score.flags && last.score.flags.length
-    ? last.score.flags[0].title
-    : null;
+function autoSaveHistory(data) {
+  const { product, score } = data;
+  if (!product) return;
   let hist = JSON.parse(localStorage.getItem('poshanHistory') || '[]');
   hist.unshift({
-    name: last.product.name,
-    brand: last.product.brand,
-    score: last.score ? last.score.score : null,
-    grade: last.score ? last.score.grade : '?',
-    topFlag,
-    decision,
-    time: new Date().toISOString(),
+    _id:     Date.now(),
+    name:    product.name,
+    brand:   product.brand || '',
+    score:   score ? score.score  : null,
+    grade:   score ? score.grade  : '?',
+    topFlag: score && score.flags && score.flags.length ? score.flags[0].title : null,
+    decision: null,
+    time:    new Date().toISOString(),
   });
   localStorage.setItem('poshanHistory', JSON.stringify(hist.slice(0, 50)));
+}
+
+function updateLocalHistory(decision) {
+  // Stamp the most recent entry with the user's decision
+  let hist = JSON.parse(localStorage.getItem('poshanHistory') || '[]');
+  if (hist.length) hist[0].decision = decision;
+  localStorage.setItem('poshanHistory', JSON.stringify(hist));
   renderHomeHistory();
 }
 
@@ -253,7 +260,7 @@ export function renderHomeHistory() {
       <div class="grade-badge ${gradeClass(entry.grade)}">${String(entry.grade || '?').toUpperCase()}</div>
       <div class="rc-info">
         <div class="rc-name">${entry.name || 'Scanned product'}</div>
-        <div class="rc-brand">${entry.brand || ''} \u00b7 ${entry.decision === 'give' ? '\u2713 Gave' : '\u2715 Skipped'}</div>
+        <div class="rc-brand">${entry.brand || ''} &middot; ${entry.decision === 'give' ? '\u2713 Gave' : entry.decision === 'skip' ? '\u2715 Skipped' : '\uD83D\uDD0D Scanned'}</div>
         <div class="rc-flags">
           <div class="rc-flag ${entry.score >= 65 ? 'fok' : entry.score >= 45 ? 'fw' : 'fb'}">
             ${entry.score != null ? `${entry.score}/100` : 'No score'}
@@ -292,42 +299,49 @@ function _buildPatternCard(items) {
 }
 
 async function loadHistory() {
-  const child = getCurrentChild();
   const wrap = document.getElementById('history-list');
   if (!wrap) return;
-  if (!child || !child.id) {
-    // Fallback to localStorage
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
-    wrap.innerHTML = items.length
-      ? '<div class="hist-period">Recent scans</div>' + items.map((e) => `
-          <div class="recent-card">
-            <div class="grade-badge ${gradeClass(e.grade)}">${String(e.grade || '?').toUpperCase()}</div>
-            <div class="rc-info"><div class="rc-name">${e.name || 'Product'}</div>
-            <div class="rc-brand">${e.score != null ? `${e.score}/100` : ''} \u00b7 ${e.decision || ''}</div></div>
-            <div class="rc-arr">\u203a</div>
-          </div>`).join('') + _buildPatternCard(items)
-      : '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No scan history yet.</div>';
+
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
+
+  if (!items.length) {
+    wrap.innerHTML = '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No scans yet &mdash; scan a product to get started!</div>';
     return;
   }
-  try {
-    const history = await getScanHistory(child.id);
-    wrap.innerHTML = history.length
-      ? '<div class="hist-period">Scan history</div>' + history.map((h) => {
-          const sr = h.score_result || {};
-          return `<div class="recent-card">
-            <div class="grade-badge ${gradeClass(sr.grade)}">${String(sr.grade || '?').toUpperCase()}</div>
-            <div class="rc-info">
-              <div class="rc-name">${h.barcode ? `Barcode: ${h.barcode}` : 'Scan'}</div>
-              <div class="rc-brand">${sr.score != null ? `${sr.score}/100` : ''} \u00b7 ${h.parent_decision || 'undecided'}</div>
+
+  const decisionLabel = (d) =>
+    d === 'give' ? '<span style="color:var(--forest);">\u2713 Gave</span>'
+    : d === 'skip' ? '<span style="color:var(--rose);">\u2715 Skipped</span>'
+    : '<span style="color:var(--slate-mid);">\uD83D\uDD0D Scanned</span>';
+
+  const timeLabel = (iso) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffH = Math.round((now - d) / 36e5);
+    if (diffH < 1)  return 'Just now';
+    if (diffH < 24) return `${diffH}h ago`;
+    return d.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+  };
+
+  wrap.innerHTML =
+    _buildPatternCard(items) +
+    '<div class="hist-period">All scans</div>' +
+    items.map((e) => `
+      <div class="recent-card">
+        <div class="grade-badge ${gradeClass(e.grade)}">${String(e.grade || '?').toUpperCase()}</div>
+        <div class="rc-info">
+          <div class="rc-name">${e.name || 'Product'}</div>
+          <div class="rc-brand">${e.brand || ''} &middot; ${decisionLabel(e.decision)}</div>
+          <div class="rc-flags">
+            <div class="rc-flag ${(e.score||0)>=65?'fok':(e.score||0)>=45?'fw':'fb'}">
+              ${e.score != null ? `${e.score}/100` : 'No score'}
             </div>
-            <div class="rc-arr">\u203a</div>
-          </div>`;
-        }).join('')
-      : '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No scan history yet.</div>';
-  } catch {
-    wrap.innerHTML = '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">Could not load history.</div>';
-  }
+            <div class="rc-flag" style="font-size:10px;color:var(--slate-mid);border:none;background:none;">${timeLabel(e.time)}</div>
+          </div>
+        </div>
+        <div class="rc-arr">\u203a</div>
+      </div>`).join('');
 }
 
 function loadProfileStats() {
@@ -342,14 +356,68 @@ function loadProfileStats() {
 
 // ─── Search ───
 
+/**
+ * Parse a product URL from any retailer into a search query string.
+ * Returns the extracted name/query, or null if not a URL.
+ */
+function parseProductUrl(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith('http')) return null;
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.replace(/^www\./, '');
+    const parts = url.pathname.split('/').filter(Boolean);
+
+    // Walmart: /ip/Product-Name/id  or  /ip/id
+    if (host.includes('walmart.com')) {
+      const ipIdx = parts.indexOf('ip');
+      if (ipIdx !== -1 && parts[ipIdx + 1] && /[a-zA-Z]/.test(parts[ipIdx + 1]))
+        return decodeURIComponent(parts[ipIdx + 1]).replace(/-/g, ' ');
+    }
+
+    // Amazon/Flipkart: text segment before /dp/ or /p/
+    const markerIdx = parts.findIndex((p) => p === 'dp' || p === 'p');
+    if (markerIdx > 0) {
+      return decodeURIComponent(parts[markerIdx - 1]).replace(/[-_]/g, ' ');
+    }
+
+    // BigBasket / generic e-commerce: first long non-numeric slug in path
+    const slug = parts.find((p) => p.length > 8 && /[a-zA-Z]/.test(p) && !/^\d+$/.test(p));
+    if (slug) return decodeURIComponent(slug).replace(/[-_]/g, ' ');
+
+    // Last resort: meaningful words from the whole path
+    const words = url.pathname
+      .split(/[/\-_%+]/).map(decodeURIComponent)
+      .filter((w) => w.length > 3 && !/^\d+$/.test(w));
+    return words.length ? words.join(' ') : null;
+  } catch {
+    return null;
+  }
+}
+
+async function _runSearchQuery(query) {
+  const inputEl = document.getElementById('search-input');
+  if (inputEl) inputEl.value = query;
+  await runSearch();
+}
+
 export async function runSearch() {
   const q = document.getElementById('search-input');
   if (!q || !q.value.trim()) return;
+
+  let searchTerm = q.value.trim();
+  const fromUrl = parseProductUrl(searchTerm);
+  if (fromUrl) {
+    searchTerm = fromUrl;
+    q.value = fromUrl;     // show the extracted name in the box
+    showError(`Searching for “${fromUrl}” from that link 🔗`, 2500);
+  }
+
   const resultsEl = document.getElementById('search-results');
   if (resultsEl) resultsEl.innerHTML = '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">Searching\u2026</div>';
   try {
     const child = getCurrentChild();
-    const data = await searchProducts(q.value.trim(), child ? child.id : null);
+    const data = await searchProducts(searchTerm, child ? child.id : null);
     const { products, scores } = data;
     if (!products.length) {
       if (resultsEl) resultsEl.innerHTML = '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No results found. Try a different name.</div>';
@@ -371,7 +439,9 @@ export async function runSearch() {
       }).join('');
     }
     window._selectSearchResult = (i) => {
-      renderResult({ product: products[i], score: scores ? scores[i] : null });
+      const data = { product: products[i], score: scores ? scores[i] : null };
+      renderResult(data);
+      autoSaveHistory(data);
       goScreen('result');
     };
   } catch (err) {
