@@ -9,6 +9,16 @@ import { scanBarcode, scanOcr, searchProducts, getScanHistory, logDecisionApi } 
 
 let _lastScanId = null;
 
+// Quick-tap demo products shown on empty home screen
+const _DEMO_HINTS = [
+  { barcode: '8901058852362', name: 'Maggi Noodles',    emoji: '\uD83C\uDF5C' },
+  { barcode: '8901058000068', name: 'Cerelac Wheat',    emoji: '\uD83C\uDF3E' },
+  { barcode: '8901396024512', name: 'Bournvita',        emoji: '\u2615' },
+  { barcode: '8901015005332', name: 'Parle-G',          emoji: '\uD83C\uDF6A' },
+  { barcode: '016000121027',  name: 'Cheerios',         emoji: '\uD83E\uDD63' },
+  { barcode: '038000199271',  name: 'Froot Loops',      emoji: '\uD83C\uDF6E' },
+];
+
 // ─── Navigation ───
 
 // Nav-item IDs per screen (for bottom-nav active state)
@@ -138,6 +148,13 @@ async function lookupAndScore(barcode, source) {
     const data = await scanBarcode(barcode, childId);
     _lastScanId = data.scan_id || null;
 
+    // Offline / not-in-catalogue fallback — show suggestions instead of crashing
+    if (data.not_found) {
+      goScreen('home');
+      showNotFoundSheet(barcode, data.suggestions || []);
+      return;
+    }
+
     animateStep('step-fetch', false, true);
     animateStep('step-score', true);
     const stepText = document.getElementById('step-score-text');
@@ -154,9 +171,7 @@ async function lookupAndScore(barcode, source) {
     renderHomeHistory();
   } catch (err) {
     goScreen('home');
-    showError(err.message.includes('not found')
-      ? 'Product not found. Try searching by name instead.'
-      : `Scan failed: ${err.message}`);
+    showError(`Scan failed: ${err.message}`);
   }
 }
 
@@ -214,7 +229,23 @@ export function renderHomeHistory() {
   let items = [];
   try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
   if (!items.length) {
-    wrap.innerHTML = '<div style="padding:8px 22px 0;font-size:13px;color:var(--slate-mid);">No scans yet. Tap to scan your first product!</div>';
+    wrap.innerHTML = `
+      <div style="padding:8px 22px 4px;font-size:13px;color:var(--slate-mid);">
+        No scans yet — try one of these demo products:
+      </div>
+      <div style="display:flex;gap:8px;padding:4px 22px 0;overflow-x:auto;scrollbar-width:none;padding-bottom:8px;">
+        ${_DEMO_HINTS.map((h) => `
+          <div onclick="window._scanDemo('${h.barcode}')" style="
+            flex-shrink:0;background:var(--cream);border:1.5px solid var(--border);
+            border-radius:13px;padding:10px 13px;cursor:pointer;min-width:130px;
+          ">
+            <div style="font-size:18px;margin-bottom:4px;">${h.emoji}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--slate);line-height:1.3;">${h.name}</div>
+            <div style="font-size:10px;color:var(--terra);font-weight:700;margin-top:3px;">Tap to scan demo →</div>
+          </div>`).join('')}
+      </div>`;
+    // Expose demo scan trigger globally
+    window._scanDemo = (barcode) => lookupAndScore(barcode, 'barcode');
     return;
   }
   wrap.innerHTML = items.slice(0, 5).map((entry) => `
@@ -358,4 +389,74 @@ export function showError(msg, durationMs = 3500) {
   banner.textContent = msg;
   banner.style.display = 'block';
   setTimeout(() => { banner.style.display = 'none'; }, durationMs);
+}
+
+/**
+ * Show a bottom sheet when scanned barcode isn't in the offline catalogue.
+ * Offers similar demo products and a search shortcut.
+ */
+export function showNotFoundSheet(barcode, suggestions = []) {
+  // Remove any existing sheet
+  document.getElementById('not-found-sheet')?.remove();
+
+  const sheet = document.createElement('div');
+  sheet.id = 'not-found-sheet';
+  sheet.style.cssText = [
+    'position:fixed;bottom:0;left:0;right:0;z-index:9000;',
+    'background:var(--cream);border-radius:20px 20px 0 0;',
+    'box-shadow:0 -8px 40px rgba(61,43,31,0.18);',
+    'padding:20px 22px 40px;',
+    'animation:slideUp .28s cubic-bezier(0.16,1,0.3,1);',
+  ].join('');
+
+  const suggestionsHtml = suggestions.length
+    ? suggestions.map((s) => {
+        const p = s.product;
+        if (!p) return '';
+        return `<div class="recent-card" style="cursor:pointer;" onclick="window._loadSuggestion('${p.barcode}')">
+          <div class="grade-badge gB" style="font-size:13px;">📦</div>
+          <div class="rc-info">
+            <div class="rc-name">${p.name}</div>
+            <div class="rc-brand">${p.brand || ''} · Try this demo</div>
+          </div>
+          <div class="rc-arr">›</div>
+        </div>`;
+      }).join('')
+    : '';
+
+  sheet.innerHTML = `
+    <div style="width:36px;height:4px;background:var(--sand3);border-radius:2px;margin:0 auto 18px;"></div>
+    <div style="font-family:var(--font-serif);font-size:18px;font-weight:700;color:var(--slate);margin-bottom:5px;">
+      Product not in offline catalogue
+    </div>
+    <div style="font-size:13px;color:var(--slate-mid);margin-bottom:16px;line-height:1.6;">
+      Barcode <strong>${barcode}</strong> isn't in the local database yet.
+      External APIs are pending network access. Try these similar products or search by name:
+    </div>
+    ${suggestionsHtml}
+    <button onclick="document.getElementById('not-found-sheet').remove();window.goScreen('search');" style="
+      width:100%;padding:15px;background:var(--terra);color:white;
+      border:none;border-radius:14px;font-family:var(--font-sans);
+      font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;
+    ">🔍 Search by product name</button>
+    <button onclick="document.getElementById('not-found-sheet').remove();" style="
+      width:100%;padding:12px;background:transparent;color:var(--slate-mid);
+      border:1.5px solid var(--border2);border-radius:14px;font-family:var(--font-sans);
+      font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;
+    ">Dismiss</button>
+  `;
+
+  document.body.appendChild(sheet);
+
+  // Clicking a suggestion loads it as if it were scanned
+  window._loadSuggestion = async (bc) => {
+    sheet.remove();
+    await lookupAndScore(bc, 'barcode');
+  };
+
+  // Tap outside to dismiss
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.3);';
+  backdrop.onclick = () => { sheet.remove(); backdrop.remove(); };
+  document.body.insertBefore(backdrop, sheet);
 }

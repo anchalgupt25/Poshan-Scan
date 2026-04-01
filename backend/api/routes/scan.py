@@ -17,7 +17,7 @@ from ...models.product import Product, NutritionFacts, OcrScanRequest, NovaGroup
 from ...models.score import ScoreResult
 from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_field
 from ...services import open_food_facts, usda_fdc
-from ...services.demo_products import lookup_demo_barcode, search_demo_products
+from ...services.demo_products import lookup_demo_barcode, search_demo_products, get_demo_suggestions
 from ...core.scoring.engine import score_product
 from ...models.child import ChildProfile
 import os
@@ -115,7 +115,20 @@ async def scan_barcode(
             source = "demo"
 
         if not product:
-            raise HTTPException(status_code=404, detail="Product not found in any database")
+            # Graceful offline fallback — return suggestions instead of a hard 404
+            suggestions = get_demo_suggestions(barcode, count=3)
+            return {
+                "product": None,
+                "score": None,
+                "data_source": "none",
+                "demo_mode": False,
+                "not_found": True,
+                "barcode": barcode,
+                "suggestions": [
+                    {"product": p.model_dump(), "score": None}
+                    for p in suggestions
+                ],
+            }
 
         # Cache it for next time
         if source != "cache":
