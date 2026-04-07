@@ -2,7 +2,12 @@
 
 Docs: https://fdc.nal.usda.gov/api-guide.html
 Free API key: https://fdc.nal.usda.gov/api-guide.html#bkmk-1
-Rate limit: 1,000 req/hour with key.
+Rate limit: 1,000 req/hour with key (30/min on DEMO_KEY).
+
+Coverage:
+  - ~1M US branded foods with UPC/GTIN codes
+  - Foundation & SR Legacy data (raw commodity foods, no barcodes)
+  - Key authority: USDA, FDA, regulated US packaged food labels
 """
 from __future__ import annotations
 
@@ -11,6 +16,17 @@ import httpx
 from ..models.product import Product, NutritionFacts, NovaGroup
 
 BASE_URL = "https://api.nal.usda.gov/fdc/v1"
+
+# Respect HTTP_PROXY / HTTPS_PROXY env vars (needed on Walmart corp network)
+_PROXIES: dict | None = None
+_http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+_https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+if _http_proxy or _https_proxy:
+    _PROXIES = {}
+    if _http_proxy:
+        _PROXIES["http://"] = _http_proxy
+    if _https_proxy:
+        _PROXIES["https://"] = _https_proxy
 
 # NIH nutrient IDs for key nutrients
 NUTRIENT_IDS = {
@@ -54,43 +70,84 @@ def _extract_nutrients(food_nutrients: list[dict]) -> NutritionFacts:
     )
 
 
-async def search_by_name(query: str, page_size: int = 5) -> list[Product]:
-    """Search USDA FDC by product name. Returns up to page_size results."""
-    api_key = os.getenv("USDA_FDC_API_KEY", "DEMO_KEY")
+def _api_key() -> str:
+    return os.getenv("USDA_FDC_API_KEY", "DEMO_KEY")
+
+
+def _normalize_upc(upc: str) -> str:
+    """Strip leading zeros for loose barcode matching (UPC-A vs EAN-13 edge cases)."""
+    return upc.lstrip("0")
+
+
+def _food_to_product(food: dict, barcode: str | None = None) -> Product:
+    """Convert a USDA FDC food dict to a Product model."""
+    nutrition = _extract_nutrients(food.get("foodNutrients", []))
+    return Product(
+        name=food.get("description") or food.get("lowercaseDescription") or "Unknown",
+        brand=food.get("brandOwner") or food.get("brandName"),
+        barcode=barcode or food.get("gtinUpc"),
+        nova_group=NovaGroup.ULTRA_PROCESSED,  # USDA doesn't provide NOVA classification
+        ingredients_text=food.get("ingredients"),
+        data_source="usda_fdc",
+        nutrition=nutrition,
+        additives_tags=[],
+    )
+
+
+async def lookup_barcode(barcode: str) -> Product | None:
+    """Look up a product by UPC/EAN barcode in USDA Branded Foods database.
+
+    USDA FDC stores barcodes as `gtinUpc`. We search with the raw barcode as
+    the query (Branded dataType) and find the first result whose gtinUpc
+    matches after stripping leading zeros (handles UPC-A vs EAN-13 padding).
+    """
     url = f"{BASE_URL}/foods/search"
     params = {
-        "api_key": api_key,
+        "api_key": _api_key(),
+        "query": barcode,
+        "dataType": "Branded",
+        "pageSize": 10,  # small page — we just need the UPC match
+    }
+    client_kwargs: dict = {"timeout": 8.0}
+    if _PROXIES:
+        client_kwargs["proxies"] = _PROXIES
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        try:
+            resp = await client.get(url, params=params)
+            resp.raise_for_status()
+        except (httpx.HTTPError, httpx.TimeoutException):
+            return None
+
+    norm_barcode = _normalize_upc(barcode)
+    for food in resp.json().get("foods", []):
+        gtin = food.get("gtinUpc", "")
+        if gtin and _normalize_upc(gtin) == norm_barcode:
+            return _food_to_product(food, barcode=barcode)
+    return None
+
+
+async def search_by_name(query: str, page_size: int = 8) -> list[Product]:
+    """Search USDA FDC by product name. Covers branded + foundation foods.
+
+    Good for US packaged goods, cereals, baby food regulated under FDA/USDA.
+    """
+    url = f"{BASE_URL}/foods/search"
+    params = {
+        "api_key": _api_key(),
         "query": query,
         "dataType": "Branded,Foundation",
         "pageSize": page_size,
     }
-    async with httpx.AsyncClient(timeout=8.0) as client:
+    client_kwargs: dict = {"timeout": 8.0}
+    if _PROXIES:
+        client_kwargs["proxies"] = _PROXIES
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
         try:
             resp = await client.get(url, params=params)
             resp.raise_for_status()
         except (httpx.HTTPError, httpx.TimeoutException):
             return []
 
-    data = resp.json()
-    results = []
-    for food in data.get("foods", []):
-        nutrition = _extract_nutrients(food.get("foodNutrients", []))
-        results.append(Product(
-            name=food.get("description") or food.get("lowercaseDescription") or "Unknown",
-            brand=food.get("brandOwner") or food.get("brandName"),
-            barcode=food.get("gtinUpc"),
-            nova_group=NovaGroup.ULTRA_PROCESSED,  # USDA doesn't provide NOVA
-            ingredients_text=food.get("ingredients"),
-            data_source="usda_fdc",
-            nutrition=nutrition,
-            additives_tags=[],
-        ))
-    return results
-
-
-async def lookup_barcode(barcode: str) -> Product | None:
-    """Search USDA FDC by UPC barcode (via branded foods search)."""
-    results = await search_by_name(barcode, page_size=1)
-    if results and results[0].barcode == barcode:
-        return results[0]
-    return None
+    return [_food_to_product(food) for food in resp.json().get("foods", [])]

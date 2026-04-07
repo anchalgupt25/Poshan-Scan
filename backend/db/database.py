@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS products_cache (
     additives_tags TEXT NOT NULL DEFAULT '[]',
     nova_group   INTEGER DEFAULT 4,
     data_source  TEXT NOT NULL DEFAULT 'unknown',
+    image_url    TEXT,
     cached_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -47,12 +48,29 @@ CREATE TABLE IF NOT EXISTS scans (
 """
 
 
+# Additive migrations: add columns that didn't exist in older DB versions.
+# Using IF NOT EXISTS guard-style; SQLite doesn't support that for columns,
+# so we catch OperationalError (column already exists) gracefully.
+_ADDITIVE_MIGRATIONS = [
+    "ALTER TABLE products_cache ADD COLUMN image_url TEXT",
+]
+
+
 async def get_db() -> aiosqlite.Connection:
     """Get a database connection. Use as a dependency in FastAPI routes."""
     db = await aiosqlite.connect(DB_PATH)
     db.row_factory = aiosqlite.Row
     await db.executescript(CREATE_TABLES_SQL)
     await db.commit()
+
+    # Run additive migrations — safe to run every startup
+    for migration in _ADDITIVE_MIGRATIONS:
+        try:
+            await db.execute(migration)
+            await db.commit()
+        except Exception:
+            pass  # Column already exists — that's fine
+
     return db
 
 

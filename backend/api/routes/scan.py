@@ -1,11 +1,12 @@
 """Scan endpoints: barcode lookup, OCR text parse, and manual search.
 
-Flow:
-  1. Check products_cache (SQLite)
-  2. Try Open Food Facts
-  3. Fallback to USDA FDC
-  4. Run scoring engine
-  5. Cache result and return
+All product resolution is delegated to services.product_resolver — this
+module owns only the HTTP layer (request parsing, DB session, response shape).
+
+Flow for barcode:
+  product_resolver.resolve_barcode() → score_product() → log scan → return
+Flow for search:
+  product_resolver.resolve_search() → score_product() per result → return
 """
 from __future__ import annotations
 
@@ -16,14 +17,17 @@ from fastapi import APIRouter, HTTPException, Header, Query
 from ...models.product import Product, NutritionFacts, OcrScanRequest, NovaGroup
 from ...models.score import ScoreResult
 from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_field
-from ...services import open_food_facts, usda_fdc
-from ...services.demo_products import lookup_demo_barcode, search_demo_products, get_demo_suggestions
+from ...services.product_resolver import resolve_barcode, resolve_search, build_not_found_response
 from ...core.scoring.engine import score_product
 from ...models.child import ChildProfile
 import os
 
 router = APIRouter(prefix="/scan", tags=["scan"])
 
+
+# ---------------------------------------------------------------------------
+# Child helper — local to routes, reads only DB
+# ---------------------------------------------------------------------------
 
 async def _get_child(db, child_id: int | None) -> ChildProfile | None:
     """Fetch child profile if child_id provided."""
@@ -32,7 +36,6 @@ async def _get_child(db, child_id: int | None) -> ChildProfile | None:
     row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
     if not row:
         return None
-    from ...db.database import decode_json_field
     return ChildProfile(
         id=row["id"],
         user_session=row["user_session"],
@@ -46,45 +49,9 @@ async def _get_child(db, child_id: int | None) -> ChildProfile | None:
     )
 
 
-async def _cache_product(db, product: Product):
-    """Upsert product into products_cache."""
-    if not product.barcode:
-        return
-    await execute(
-        db,
-        """INSERT OR REPLACE INTO products_cache
-           (barcode, product_name, brand, ingredients_text, nutriments, additives_tags, nova_group, data_source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            product.barcode,
-            product.name,
-            product.brand,
-            product.ingredients_text,
-            json.dumps(product.nutrition.model_dump()),
-            json.dumps(product.additives_tags),
-            product.nova_group.value,
-            product.data_source,
-        ),
-    )
-
-
-async def _load_cached_product(db, barcode: str) -> Product | None:
-    """Load product from SQLite cache."""
-    row = await fetch_one(db, "SELECT * FROM products_cache WHERE barcode = ?", (barcode,))
-    if not row:
-        return None
-    nutrition_data = decode_json_field(row.get("nutriments"), {})
-    return Product(
-        name=row["product_name"],
-        brand=row.get("brand"),
-        barcode=row["barcode"],
-        nova_group=NovaGroup(row.get("nova_group", 4)),
-        ingredients_text=row.get("ingredients_text"),
-        data_source=row.get("data_source", "cache"),
-        nutrition=NutritionFacts(**nutrition_data) if nutrition_data else NutritionFacts(),
-        additives_tags=decode_json_field(row.get("additives_tags"), []),
-    )
-
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @router.get("/barcode/{barcode}")
 async def scan_barcode(
@@ -92,57 +59,28 @@ async def scan_barcode(
     child_id: Optional[int] = Query(default=None),
     x_session_id: Optional[str] = Header(default=None),
 ) -> dict:
-    """Look up a barcode, score for the child if child_id provided."""
+    """Look up a barcode and score it for the given child profile.
+
+    Resolution chain: cache → Open Food Facts → USDA FDC → demo fallback.
+    Product is automatically cached after first live API hit.
+    """
     db = await get_db()
     try:
-        # 1. Cache check
-        product = await _load_cached_product(db, barcode)
-        source = "cache"
-
-        # 2. Open Food Facts
-        if not product:
-            product = await open_food_facts.lookup_barcode(barcode)
-            source = "open_food_facts"
-
-        # 3. USDA fallback
-        if not product:
-            product = await usda_fdc.lookup_barcode(barcode)
-            source = "usda_fdc"
-
-        # 4. Demo-mode fallback (corporate network / offline dev)
-        if not product:
-            product = lookup_demo_barcode(barcode)
-            source = "demo"
+        product, source = await resolve_barcode(db, barcode)
 
         if not product:
-            # Graceful offline fallback — return suggestions instead of a hard 404
-            suggestions = get_demo_suggestions(barcode, count=3)
-            return {
-                "product": None,
-                "score": None,
-                "data_source": "none",
-                "demo_mode": False,
-                "not_found": True,
-                "barcode": barcode,
-                "suggestions": [
-                    {"product": p.model_dump(), "score": None}
-                    for p in suggestions
-                ],
-            }
-
-        # Cache it for next time
-        if source != "cache":
-            await _cache_product(db, product)
+            return build_not_found_response(barcode)
 
         child = await _get_child(db, child_id)
         result = score_product(child, product) if child else None
 
-        # Log scan
         session = x_session_id or "anonymous"
         await execute(
             db,
-            "INSERT INTO scans (user_session, child_id, barcode, scan_type, score_result) VALUES (?, ?, ?, ?, ?)",
-            (session, child_id, barcode, "barcode", json.dumps(result.model_dump() if result else {})),
+            "INSERT INTO scans (user_session, child_id, barcode, scan_type, score_result) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (session, child_id, barcode, "barcode",
+             json.dumps(result.model_dump() if result else {})),
         )
 
         return {
@@ -156,9 +94,14 @@ async def scan_barcode(
 
 
 @router.post("/ocr")
-async def scan_ocr(body: OcrScanRequest, x_session_id: Optional[str] = Header(default=None)) -> dict:
-    """Accept OCR text from client ML Kit, build a partial product, score it."""
-    # Stub product from raw OCR text — Claude will structure this when key available
+async def scan_ocr(
+    body: OcrScanRequest,
+    x_session_id: Optional[str] = Header(default=None),
+) -> dict:
+    """Accept OCR text from client ML Kit, build a partial product, score it.
+
+    Nutritional data is limited — ingredient flags only until LLM key is added.
+    """
     product = Product(
         name="Scanned Product (OCR)",
         ingredients_text=body.raw_text,
@@ -177,7 +120,10 @@ async def scan_ocr(body: OcrScanRequest, x_session_id: Optional[str] = Header(de
         return {
             "product": product.model_dump(),
             "score": result.model_dump() if result else None,
-            "ocr_note": "Nutritional data limited — ingredient flags only. Add LLM key for full OCR parsing.",
+            "ocr_note": (
+                "Nutritional data limited — ingredient flags only. "
+                "Add LLM key for full OCR parsing."
+            ),
         }
     finally:
         await db.close()
@@ -188,13 +134,20 @@ async def search_products(
     q: str = Query(..., min_length=2),
     child_id: Optional[int] = Query(default=None),
 ) -> dict:
-    """Manual product name search via USDA FDC (demo fallback when offline)."""
-    products = await usda_fdc.search_by_name(q, page_size=8)
-    # Demo fallback if USDA unreachable
+    """Product name search across Open Food Facts + USDA FDC.
+
+    OFF is tried first (best global / Indian coverage), then USDA (US brands).
+    Falls back to demo product bank when both APIs are unreachable.
+    """
+    products, source = await resolve_search(q, page_size=8)
+
     if not products:
-        products = search_demo_products(q)
-    if not products:
-        return {"products": [], "scores": [], "note": "No products found. Try a different name."}
+        return {
+            "products": [],
+            "scores": [],
+            "data_source": "none",
+            "note": "No products found. Try a more specific name or barcode scan.",
+        }
 
     db = await get_db()
     try:
@@ -209,6 +162,7 @@ async def search_products(
     return {
         "products": [p.model_dump() for p in products],
         "scores": scores,
+        "data_source": source,
     }
 
 
