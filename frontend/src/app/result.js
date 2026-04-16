@@ -2,6 +2,7 @@
  * Render the Result screen from a ScoreResult + Product API response.
  */
 import { getCurrentChild } from './profile.js';
+import { initNouriResult } from './nouri.js';
 
 const DIM_LABELS = {
   nutrition: 'Nutrition',
@@ -169,4 +170,7 @@ export function renderResult(apiResponse) {
 
   // Store result for decision logging
   window._lastScanResult = { product, score: result };
+
+  // Initialise Nouri bot with this scan's data
+  initNouriResult(apiResponse);
 }

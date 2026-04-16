@@ -95,12 +95,12 @@ export async function loadProfile() {
 }
 
 function persistLocal(profile) {
-  localStorage.setItem('poshanProfile', JSON.stringify(profile));
+  localStorage.setItem('nouriProfile', JSON.stringify(profile));
 }
 
 function loadLocal() {
   try {
-    const raw = localStorage.getItem('poshanProfile');
+    const raw = localStorage.getItem('nouriProfile');
     if (raw) {
       _currentChild = JSON.parse(raw);
       return _currentChild;

@@ -1,7 +1,8 @@
-"""Poshan Scan — FastAPI backend.
+"""Nouri Scan — FastAPI backend.
 
 Child food scoring API. Deterministic scoring, no LLM needed to start.
-Claude narration layer added when Element LLM Gateway key is available.
+Nouri chatbot: rule-based engine with Element LLM Gateway hook
+(set ELEMENT_LLM_API_KEY env var to enable).
 
 Disclaimer: All output is educational information only — not medical advice.
 """
@@ -12,14 +13,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .api.routes import children, scan
+from .api.routes import children, scan, nouri
 
 load_dotenv()
 
 app = FastAPI(
-    title="Poshan Scan API",
-    description="Child food scoring — educational information only, not medical advice.",
-    version="0.1.0",
+    title="Nouri Scan API",
+    description="Child food scoring + Nouri nutritionist bot — educational information only, not medical advice.",
+    version="0.2.0",
 )
 
 # CORS — allow local Vite dev server and any future PWA origin
@@ -35,13 +36,14 @@ app.add_middleware(
 # Routers
 app.include_router(children.router)
 app.include_router(scan.router)
+app.include_router(nouri.router)
 
 
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
-        "app": "Poshan Scan",
+        "app": "Nouri Scan",
         "disclaimer": "Educational information only — not medical advice.",
     }
 
@@ -49,7 +51,7 @@ async def health():
 @app.get("/")
 async def root():
     return {
-        "message": "Poshan Scan API is running 🔬",
+        "message": "Nouri Scan API is running 🌱",
         "docs": "/docs",
         "disclaimer": "Educational information only — not medical advice.",
     }

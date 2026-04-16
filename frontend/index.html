@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#C4622D">
+  <meta name="theme-color" content="#3B7DD8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="description" content="Know what's in every food pack your child eats — scored for their age, their goals, your family.">
-  <title>Poshan Scan</title>
+  <meta name="description" content="Know what's in every food pack your child eats — scored for their age, their goals, your family. Ask Nouri anything.">
+  <title>Nouri Scan</title>
   <link rel="manifest" href="/manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/styles/app.css">
@@ -20,18 +20,18 @@
       <div class="splash-bg"></div>
       <div class="splash-glow"></div>
       <div class="splash-center">
-        <div class="splash-icon">🔬</div>
-        <div class="splash-title">POSHAN<br><em>SCAN</em></div>
-        <div class="splash-sub">Know what’s in every food pack your child eats — scored for their age, their goals, your family.</div>
+        <div class="splash-icon">🌱</div>
+        <div class="splash-title">NOURI<br><em>Scan</em></div>
+        <div class="splash-sub">Know what's in every food pack your child eats — scored for their age, their goals, your family.</div>
         <div class="splash-pills">
           <div class="splash-pill"><div class="dot"></div>Age-safe scoring</div>
-          <div class="splash-pill"><div class="dot"></div>Indian parent lens</div>
+          <div class="splash-pill"><div class="dot"></div>Parent-first lens</div>
           <div class="splash-pill"><div class="dot"></div>Brain &amp; bone focus</div>
-          <div class="splash-pill"><div class="dot"></div>3-sec verdict</div>
+          <div class="splash-pill"><div class="dot"></div>Ask Nouri anytime</div>
         </div>
       </div>
       <div class="ob-bottom">
-        <button class="btn-primary" onclick="ob('ob2')">&#128302; Set Up My Child&rsquo;s Profile</button>
+        <button class="btn-primary" onclick="ob('ob2')">🌱 Set Up My Child&rsquo;s Profile</button>
         <button class="btn-ghost" onclick="skipToApp()">I already have a profile</button>
         <p class="disclaimer">Educational information only &mdash; not medical advice.</p>
       </div>
@@ -210,13 +210,41 @@
           <div class="so-icon">✏️</div><div class="so-name">Search</div><div class="so-hint">By name</div>
         </div>
       </div>
+      <!-- Nouri history-aware entry point -->
+      <div class="nouri-home-btn" id="nouri-home-btn" onclick="openNouriHome()" style="display:none;">
+        <div class="nhb-av">🌿</div>
+        <div class="nhb-text" id="nouri-home-btn-text"><strong>Ask Nouri</strong></div>
+        <div class="nhb-arr">›</div>
+      </div>
+
       <div class="sec-row"><div class="sec-title">Recent Scans</div><div class="sec-link" onclick="goScreen('history')">See all</div></div>
       <div id="home-recent-list"></div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🌱</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="nav-avatar">👧</div><div class="nav-l" id="nav-child-name">Profile</div><div class="nav-b"></div></div>
+    </div>
+
+    <!-- Nouri home drawer -->
+    <div class="nouri-drawer" id="nouri-home-drawer">
+      <div class="nouri-drawer-handle"></div>
+      <div class="nouri-drawer-header">
+        <div class="nouri-header-avatar">🌿</div>
+        <div class="nouri-header-info">
+          <div class="nouri-header-name">Nouri</div>
+          <div class="nouri-header-sub" id="nouri-home-sub">Your child&rsquo;s nutrition assistant</div>
+        </div>
+        <button class="nouri-close" onclick="closeNouriDrawer('nouri-home-drawer')">&#x2715;</button>
+      </div>
+      <div class="nouri-messages" id="nouri-home-msgs"></div>
+      <div class="nouri-suggestions" id="nouri-home-suggestions"></div>
+      <div class="nouri-input-bar">
+        <input class="nouri-input" id="nouri-home-input"
+          placeholder="Ask anything about your child&rsquo;s nutrition…"
+          onkeydown="if(event.key==='Enter')sendNouriHome()"/>
+        <button class="nouri-send" onclick="sendNouriHome()" aria-label="Send">↑</button>
+      </div>
     </div>
   </div>
 
@@ -292,7 +320,7 @@
         </div>
       </div>
     </div>
-    <div class="scrollable" style="padding-bottom:88px;">
+    <div class="scrollable" style="padding-bottom:138px;">
       <div class="child-lens" id="child-lens-text">
         <div class="cl-icon">👶</div>
         <div class="cl-text">Scored for your child’s age and goals.</div>
@@ -306,6 +334,17 @@
       <div class="flags-section">
         <div class="slabel" style="padding:18px 0 10px;">🚩 What We Found</div>
         <div id="flags-list"></div>
+      </div>
+
+      <!-- Nouri flag banner — auto-shown by nouri.js when red flags present -->
+      <div class="nouri-flag-banner" id="nouri-flag-banner"
+        onclick="openNouriResult('flag')" style="display:none;">
+        <div class="nfb-avatar">🌿</div>
+        <div class="nfb-text">
+          <div class="nfb-label" id="nfb-label">Nouri noticed a flag</div>
+          <div class="nfb-msg" id="nfb-msg">Tap to ask about this for your child.</div>
+        </div>
+        <div class="nfb-caret">›</div>
       </div>
       <div class="slabel">📊 Nutrient Breakdown</div>
       <div class="nt-table" id="nutrient-table"></div>
@@ -321,10 +360,43 @@
       </div>
       <div style="height:14px;"></div>
     </div>
+    <!-- Nouri persistent tab pill — always visible on result screen -->
+    <div class="nouri-tab">
+      <div class="nouri-tab-pill" onclick="openNouriResult('tab')">
+        <div class="nouri-avatar">🌿</div>
+        <div class="nouri-tab-text">
+          <div class="nouri-tab-name">Ask Nouri</div>
+          <div class="nouri-tab-hint">Questions about this score? Tap to ask.</div>
+        </div>
+        <div class="nouri-tab-arr">›</div>
+      </div>
+    </div>
+
     <div class="bottom-nav">
-      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item on" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🌱</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="result-nav-avatar">👧</div><div class="nav-l" id="result-nav-name">Profile</div><div class="nav-b"></div></div>
+    </div>
+
+    <!-- Nouri result drawer -->
+    <div class="nouri-drawer" id="nouri-result-drawer">
+      <div class="nouri-drawer-handle"></div>
+      <div class="nouri-drawer-header">
+        <div class="nouri-header-avatar">🌿</div>
+        <div class="nouri-header-info">
+          <div class="nouri-header-name">Nouri</div>
+          <div class="nouri-header-sub" id="nouri-result-sub">This product &middot; Your child</div>
+        </div>
+        <button class="nouri-close" onclick="closeNouriDrawer('nouri-result-drawer')" aria-label="Close Nouri">&#x2715;</button>
+      </div>
+      <div class="nouri-messages" id="nouri-result-msgs"></div>
+      <div class="nouri-suggestions" id="nouri-result-suggestions"></div>
+      <div class="nouri-input-bar">
+        <input class="nouri-input" id="nouri-result-input"
+          placeholder="Ask about this score…"
+          onkeydown="if(event.key==='Enter')sendNouriResult()"/>
+        <button class="nouri-send" onclick="sendNouriResult()" aria-label="Send">↑</button>
+      </div>
     </div>
   </div>
 
@@ -338,7 +410,7 @@
       <div id="history-list"></div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🌱</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
       <div class="nav-item on" data-nav="nav-history"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-profile" onclick="goScreen('profile')"><div class="nav-i" id="hist-nav-avatar">👧</div><div class="nav-l" id="hist-nav-name">Profile</div><div class="nav-b"></div></div>
     </div>
@@ -369,7 +441,7 @@
       </div>
     </div>
     <div class="bottom-nav">
-      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🔬</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
+      <div class="nav-item" data-nav="nav-home" onclick="goScreen('home')"><div class="nav-i">🌱</div><div class="nav-l">Scan</div><div class="nav-b"></div></div>
       <div class="nav-item" data-nav="nav-history" onclick="goScreen('history')"><div class="nav-i">📋</div><div class="nav-l">History</div><div class="nav-b"></div></div>
       <div class="nav-item on" data-nav="nav-profile"><div class="nav-i" id="profile-nav-avatar">👧</div><div class="nav-l" id="profile-nav-name">Profile</div><div class="nav-b"></div></div>
     </div>

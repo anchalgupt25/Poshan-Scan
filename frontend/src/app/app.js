@@ -7,6 +7,14 @@ import { renderResult } from './result.js';
 import { startBarcodeScanner, stopBarcodeScanner } from '../scanner/barcode.js';
 import { showPhotoScanSheet } from '../scanner/photo-scan.js';
 import { scanBarcode, scanOcr, searchProducts, getScanHistory, logDecisionApi } from '../api/client.js';
+import { initNouriHome, openNouriResult, openNouriHome, closeNouriDrawer, sendNouriResult, sendNouriHome } from './nouri.js';
+
+// Expose Nouri interactions globally (called from inline HTML onclick)
+window.openNouriResult  = openNouriResult;
+window.openNouriHome    = openNouriHome;
+window.closeNouriDrawer = closeNouriDrawer;
+window.sendNouriResult  = sendNouriResult;
+window.sendNouriHome    = sendNouriHome;
 
 let _lastScanId = null;
 
@@ -44,6 +52,7 @@ export function goScreen(id) {
   document.querySelectorAll(`[data-nav="${activeNav}"]`).forEach((el) => el.classList.add('on'));
   if (id === 'history') loadHistory();
   if (id === 'profile') loadProfileStats();
+  if (id === 'home') initNouriHome();
 }
 
 export function ob(id) {
@@ -201,7 +210,7 @@ export async function logDecision(decision) {
 function autoSaveHistory(data) {
   const { product, score } = data;
   if (!product) return;
-  let hist = JSON.parse(localStorage.getItem('poshanHistory') || '[]');
+  let hist = JSON.parse(localStorage.getItem('nouriHistory') || '[]');
   hist.unshift({
     _id:     Date.now(),
     name:    product.name,
@@ -212,14 +221,14 @@ function autoSaveHistory(data) {
     decision: null,
     time:    new Date().toISOString(),
   });
-  localStorage.setItem('poshanHistory', JSON.stringify(hist.slice(0, 50)));
+  localStorage.setItem('nouriHistory', JSON.stringify(hist.slice(0, 50)));
 }
 
 function updateLocalHistory(decision) {
   // Stamp the most recent entry with the user's decision
-  let hist = JSON.parse(localStorage.getItem('poshanHistory') || '[]');
+  let hist = JSON.parse(localStorage.getItem('nouriHistory') || '[]');
   if (hist.length) hist[0].decision = decision;
-  localStorage.setItem('poshanHistory', JSON.stringify(hist));
+  localStorage.setItem('nouriHistory', JSON.stringify(hist));
   renderHomeHistory();
 }
 
@@ -234,7 +243,7 @@ export function renderHomeHistory() {
   const wrap = document.getElementById('home-recent-list');
   if (!wrap) return;
   let items = [];
-  try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
+  try { items = JSON.parse(localStorage.getItem('nouriHistory') || '[]'); } catch { items = []; }
   if (!items.length) {
     wrap.innerHTML = `
       <div style="padding:8px 22px 4px;font-size:13px;color:var(--slate-mid);">
@@ -303,7 +312,7 @@ async function loadHistory() {
   if (!wrap) return;
 
   let items = [];
-  try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
+  try { items = JSON.parse(localStorage.getItem('nouriHistory') || '[]'); } catch { items = []; }
 
   if (!items.length) {
     wrap.innerHTML = '<div style="padding:20px 22px;font-size:13px;color:var(--slate-mid);">No scans yet &mdash; scan a product to get started!</div>';
@@ -346,7 +355,7 @@ async function loadHistory() {
 
 function loadProfileStats() {
   let items = [];
-  try { items = JSON.parse(localStorage.getItem('poshanHistory') || '[]'); } catch { items = []; }
+  try { items = JSON.parse(localStorage.getItem('nouriHistory') || '[]'); } catch { items = []; }
   const n = items.length;
   const avoided = items.filter((x) => x.decision === 'skip').length;
   const avg = n ? Math.round(items.filter((x) => x.score != null).reduce((s, x) => s + x.score, 0) / items.length) : 0;

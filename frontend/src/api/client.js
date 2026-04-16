@@ -7,10 +7,10 @@ const BASE = '/api';
 
 /** Read session ID from localStorage (or create one). */
 export function getSessionId() {
-  let sid = localStorage.getItem('poshanSession');
+  let sid = localStorage.getItem('nouriSession');
   if (!sid) {
     sid = 'session-' + Math.random().toString(36).slice(2) + Date.now();
-    localStorage.setItem('poshanSession', sid);
+    localStorage.setItem('nouriSession', sid);
   }
   return sid;
 }
@@ -71,4 +71,15 @@ export async function getScanHistory(childId, limit = 20) {
 
 export async function logDecisionApi(scanId, decision) {
   return request('PATCH', `/scan/history/${scanId}/decision?decision=${decision}`);
+}
+
+/* ─── Nouri Chat ─── */
+
+/**
+ * POST /nouri/chat
+ * payload: { context, message, child_id, scan_data?, scan_history?, history? }
+ * Returns: { text: string, chips?: string[] }
+ */
+export async function nouriChat(payload) {
+  return request('POST', '/nouri/chat', payload);
 }

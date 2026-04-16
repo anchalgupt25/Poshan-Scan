@@ -6,10 +6,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Poshan Scan',
-        short_name: 'Poshan',
-        description: 'Know what is in every food pack your child eats',
-        theme_color: '#C4622D',
+        name: 'Nouri Scan',
+        short_name: 'Nouri',
+        description: 'Know what is in every food pack your child eats — ask Nouri anything',
+        theme_color: '#3B7DD8',
         background_color: '#FAF3E8',
         display: 'standalone',
         orientation: 'portrait',
