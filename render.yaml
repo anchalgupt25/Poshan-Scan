@@ -54,8 +54,9 @@ services:
         value: "5"
 
   # ── Frontend: React static site (always free, global CDN) ──────────────
-  - type: static
+  - type: web
     name: nouri-scan
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
