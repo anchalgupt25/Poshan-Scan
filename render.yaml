@@ -53,11 +53,9 @@ services:
       - key: OTP_MAX_PER_HOUR
         value: "5"
 
-  # ── Frontend: React static site (no region key — static sites are global CDN) ─
-  - type: web
+  # ── Frontend: React static site (always free, global CDN) ──────────────
+  - type: static
     name: nouri-scan
-    runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
