@@ -1,7 +1,7 @@
 {
   "name": "nouri-scan-frontend",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@zxing/browser": "^0.1.4",
-    "@zxing/library": "^0.21.3"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "vite": "^5.2.0",
-    "vite-plugin-pwa": "^0.20.0"
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
   }
 }

@@ -1,0 +1,95 @@
+.splash-screen {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(244, 216, 154, 0.4) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+}
+.splash-content {
+  text-align: center;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 20px;
+  flex: 1; justify-content: center;
+}
+.splash-logo { font-size: 80px; margin-bottom: 8px; animation: logoFloat 4s ease-in-out infinite; }
+.splash-brand {
+  font-family: var(--serif);
+  font-size: 52px; font-weight: 500;
+  color: var(--rust);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.splash-brand em { font-style: italic; font-weight: 400; color: var(--terracotta); }
+.splash-tagline {
+  font-family: var(--serif);
+  font-size: 17px; font-weight: 300; font-style: italic;
+  color: var(--ink-soft);
+  max-width: 260px; line-height: 1.5;
+}
+.splash-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+.splash-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 100px;
+  font-size: 13px; font-weight: 500;
+  color: var(--ink-soft);
+}
+.pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--sage); display: inline-block;
+}
+.splash-bottom { width: 100%; flex-shrink: 0; padding-top: 24px; }
+
+.onboard-screen { background: var(--cream); }
+.onboard-header { padding: 20px 24px 0; flex-shrink: 0; }
+.onboard-step-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--terracotta);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+.onboard-question {
+  font-family: var(--serif);
+  font-size: 28px; font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 8px; line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.onboard-question em { font-style: italic; font-weight: 400; color: var(--terracotta); }
+.onboard-sub { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+.onboard-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.onboard-section { margin-bottom: 24px; }
+.onboard-label {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+  display: block;
+}
+.onboard-bottom {
+  padding: 16px 24px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.age-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.nutrient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nutrient-card {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 16px; text-align: center;
+}
+.nutrient-card .n-emoji { font-size: 32px; margin-bottom: 6px; }
+.nutrient-card .n-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.nutrient-card .n-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.3; }
+.dietary-info-banner {
+  background: rgba(127, 163, 114, 0.12);
+  border-left: 3px solid var(--sage);
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}

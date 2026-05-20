@@ -1,0 +1,400 @@
+import React, { useState, useRef } from 'react';
+import useStore from '../../store/useStore';
+import StatusBar from '../shared/StatusBar';
+import {
+  scanBarcode,
+  searchProducts,
+  ocrLabelImage,
+  extractBarcodeFromUrl,
+  extractSearchTermFromUrl,
+} from '../../utils/api';
+import './scanning.css';
+
+const METHODS = {
+  barcode: { emoji: '📷', title: 'Scan Barcode', desc: 'Point camera at the product barcode' },
+  photo:   { emoji: '🏷️', title: 'Photo Label',  desc: 'Snap a clear shot of the nutrition label' },
+  link:    { emoji: '🔗', title: 'Paste Product Link', desc: 'Amazon, Walmart, Target, Instacart, Whole Foods' },
+};
+
+export default function ScanningScreen() {
+  const navigate = useStore((s) => s.navigate);
+  const setSelectedProduct = useStore((s) => s.setSelectedProduct);
+  const activeKid = useStore((s) => s.getActiveKid());
+  const scanMethod = useStore((s) => s.scanMethod) || 'barcode';
+  const method = METHODS[scanMethod] || METHODS.barcode;
+  const childId = activeKid?.id;
+
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [linkInput, setLinkInput] = useState('');
+  const [status, setStatus] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoStatus, setPhotoStatus] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const goToResult = (scanResult) => {
+    setSelectedProduct(scanResult);
+    navigate('result');
+  };
+
+  // ─── Barcode lookup ───────────────────────────────────────
+  const handleBarcodeLookup = async () => {
+    const code = manualBarcode.trim();
+    if (!code) return;
+    setStatus('looking');
+    setErrorMsg('');
+    try {
+      const r = await scanBarcode(code, childId);
+      if (r?.product?.name && r.product.data_source !== 'demo') {
+        setStatus('found');
+        setTimeout(() => goToResult(r), 600);
+      } else if (r?.product?.name) {
+        setStatus('found');
+        setTimeout(() => goToResult(r), 600);
+      } else {
+        setStatus('notfound');
+        setErrorMsg('Barcode not in our databases yet. Try a different product.');
+      }
+    } catch (err) {
+      setStatus('notfound');
+      setErrorMsg(err.message || 'Could not look up barcode.');
+    }
+  };
+
+  // ─── Link/text search ─────────────────────────────────────
+  const handleLinkLookup = async () => {
+    const link = linkInput.trim();
+    if (!link) return;
+    setStatus('looking');
+    setErrorMsg('');
+    setSearchResults([]);
+
+    // Try barcode extraction first
+    const code = extractBarcodeFromUrl(link);
+    if (code) {
+      try {
+        const r = await scanBarcode(code, childId);
+        if (r?.product?.name) {
+          setStatus('found');
+          setTimeout(() => goToResult(r), 600);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // Then text search
+    const searchTerm = link.startsWith('http') ? extractSearchTermFromUrl(link) : link;
+    if (!searchTerm) {
+      setStatus('notfound');
+      setErrorMsg('Could not extract a product name from that URL.');
+      return;
+    }
+
+    try {
+      const r = await searchProducts(searchTerm, childId);
+      const products = r?.products || [];
+      const scores = r?.scores || [];
+      if (products.length === 0) {
+        setStatus('notfound');
+        setErrorMsg(`No products found for "${searchTerm}". Try a more specific name or paste the barcode.`);
+      } else if (products.length === 1) {
+        setStatus('found');
+        setTimeout(() => goToResult({ product: products[0], score: scores[0] }), 600);
+      } else {
+        setSearchResults(products.map((p, i) => ({ product: p, score: scores[i] })));
+        setStatus(null);
+      }
+    } catch (err) {
+      setStatus('notfound');
+      setErrorMsg(err.message || 'Search failed');
+    }
+  };
+
+  // ─── Photo upload ─────────────────────────────────────────
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target.result;
+      setPhotoPreview(dataUrl);
+      setPhotoStatus('processing');
+      setErrorMsg('');
+      try {
+        const r = await ocrLabelImage(dataUrl, childId);
+        setPhotoStatus('done');
+        setTimeout(() => goToResult(r), 700);
+      } catch (err) {
+        setPhotoStatus('error');
+        setErrorMsg(err.message || 'OCR failed');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ============================================================
+  //  Barcode mode
+  // ============================================================
+  if (scanMethod === 'barcode') {
+    return (
+      <div className="screen animate-fade-in">
+        <StatusBar />
+        <div className="nav-header">
+          <button className="nav-back" onClick={() => navigate('home')}>←</button>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{method.title}</div>
+          <div style={{ width: 40 }} />
+        </div>
+
+        <div className="scrollable" style={{ padding: '16px 24px 24px' }}>
+          <div className="scan-frame" style={{ margin: '8px auto 24px' }}>
+            <div className="scan-corners">
+              <div className="corner tl" /><div className="corner tr" />
+              <div className="corner bl" /><div className="corner br" />
+            </div>
+            <div className="scan-line-anim" />
+            <div className="scan-hint">{method.desc}</div>
+          </div>
+
+          <div className="section-label">ENTER BARCODE MANUALLY</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <input
+              type="tel"
+              inputMode="numeric"
+              className="text-input"
+              placeholder="e.g. 028000010019"
+              value={manualBarcode}
+              onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
+              disabled={status === 'looking'}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn-primary"
+              onClick={handleBarcodeLookup}
+              disabled={!manualBarcode.trim() || status === 'looking'}
+              style={{ width: 'auto', padding: '14px 22px' }}
+            >
+              {status === 'looking' ? '…' : 'Look up'}
+            </button>
+          </div>
+
+          {status === 'looking' && (
+            <div className="link-status">
+              <div className="processing-spinner" />
+              <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
+                Searching Open Food Facts + USDA…
+              </div>
+            </div>
+          )}
+
+          {status === 'notfound' && (
+            <div className="lookup-error">
+              <div style={{ fontSize: 28, marginBottom: 6 }}>🔍</div>
+              <strong>Not found</strong>
+              <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6 }}>{errorMsg}</div>
+            </div>
+          )}
+
+          <div className="scan-note" style={{ marginTop: 16 }}>
+            Live camera barcode reader is Phase 2. For now, type a real UPC barcode (e.g. <code>0085239073209</code> for Goldfish) and we'll fetch it live from Open Food Facts + USDA.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  //  Photo Label mode
+  // ============================================================
+  if (scanMethod === 'photo') {
+    return (
+      <div className="screen animate-fade-in">
+        <StatusBar />
+        <div className="nav-header">
+          <button className="nav-back" onClick={() => navigate('home')}>←</button>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{method.title}</div>
+          <div style={{ width: 40 }} />
+        </div>
+
+        <div className="scrollable" style={{ padding: '20px 24px 24px' }}>
+          {!photoPreview ? (
+            <>
+              <div className="photo-upload-area" onClick={() => fileInputRef.current?.click()}>
+                <div className="photo-upload-icon">📸</div>
+                <div className="photo-upload-title">Take or upload a photo</div>
+                <div className="photo-upload-desc">
+                  Photograph the ingredients list or nutrition facts panel
+                </div>
+                <button className="btn-primary" style={{ marginTop: 16, maxWidth: 260 }}>
+                  Choose Photo
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handlePhotoUpload}
+              />
+              <div className="scan-tip">
+                <div className="scan-tip-icon">💡</div>
+                <div>
+                  <strong>Tips for best results:</strong>
+                  <ul style={{ marginTop: 6, paddingLeft: 18, fontSize: 13, color: 'var(--ink-muted)' }}>
+                    <li>Good lighting, no glare</li>
+                    <li>Get the full panel in frame</li>
+                    <li>Hold steady for sharp focus</li>
+                  </ul>
+                  <div style={{ fontSize: 12, marginTop: 8, color: 'var(--ink-muted)' }}>
+                    Powered by Claude Vision when <code>ANTHROPIC_API_KEY</code> is set.
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="photo-result">
+              <img src={photoPreview} alt="Uploaded label" className="photo-preview" />
+              <div className="photo-status">
+                {photoStatus === 'processing' && (
+                  <>
+                    <div className="processing-spinner" />
+                    <div>Reading nutrition label…</div>
+                    <div className="photo-status-sub">Claude Vision is parsing the panel</div>
+                  </>
+                )}
+                {photoStatus === 'done' && (
+                  <>
+                    <div style={{ fontSize: 32 }}>✅</div>
+                    <div>Label parsed!</div>
+                    <div className="photo-status-sub">Loading scoring result…</div>
+                  </>
+                )}
+                {photoStatus === 'error' && (
+                  <div className="lookup-error">
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>⚠️</div>
+                    <strong>OCR not available</strong>
+                    <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6, lineHeight: 1.5, textAlign: 'left' }}>
+                      {errorMsg}
+                    </div>
+                    <button
+                      className="btn-primary"
+                      style={{ marginTop: 12, maxWidth: 260 }}
+                      onClick={() => { setPhotoPreview(null); setPhotoStatus(null); setErrorMsg(''); }}
+                    >
+                      Try a different photo
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      style={{ marginTop: 8, maxWidth: 260 }}
+                      onClick={() => { useStore.getState().setScanMethod('barcode'); useStore.getState().navigate('scanning'); }}
+                    >
+                      ← Use barcode instead
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  //  Paste Link mode
+  // ============================================================
+  return (
+    <div className="screen animate-fade-in">
+      <StatusBar />
+      <div className="nav-header">
+        <button className="nav-back" onClick={() => navigate('home')}>←</button>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>{method.title}</div>
+        <div style={{ width: 40 }} />
+      </div>
+
+      <div className="scrollable" style={{ padding: '20px 24px 24px' }}>
+        <div className="link-prompt">
+          <div className="link-emoji">🔗</div>
+          <div className="link-title">Paste a product link or name</div>
+          <div className="link-desc">Amazon, Walmart, Target, Instacart — or just type a name</div>
+        </div>
+
+        <input
+          className="text-input"
+          type="text"
+          placeholder="https://www.amazon.com/... or 'Cheerios'"
+          value={linkInput}
+          onChange={(e) => setLinkInput(e.target.value)}
+          disabled={status === 'looking'}
+          style={{ marginBottom: 12 }}
+        />
+
+        <button
+          className="btn-primary"
+          onClick={handleLinkLookup}
+          disabled={!linkInput.trim() || status === 'looking'}
+        >
+          {status === 'looking' ? 'Searching…' : 'Find this product'}
+        </button>
+
+        {status === 'looking' && (
+          <div className="link-status" style={{ marginTop: 16 }}>
+            <div className="processing-spinner" />
+            <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
+              Searching Open Food Facts + USDA…
+            </div>
+          </div>
+        )}
+
+        {status === 'notfound' && (
+          <div className="lookup-error">
+            <div style={{ fontSize: 28, marginBottom: 6 }}>🔍</div>
+            <strong>No match</strong>
+            <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6, lineHeight: 1.5, textAlign: 'left' }}>
+              {errorMsg}
+              <br /><br />
+              <strong style={{ color: 'var(--ink-soft)' }}>Try this:</strong>
+              <br />• Find the UPC barcode on the package
+              <br />• Open <strong>Scan Barcode</strong> and enter it manually
+            </div>
+          </div>
+        )}
+
+        {searchResults.length > 0 && (
+          <>
+            <div className="section-label" style={{ marginTop: 20 }}>
+              {searchResults.length} MATCHES — PICK ONE
+            </div>
+            {searchResults.map((r, i) => (
+              <div key={i} className="result-card" onClick={() => goToResult(r)}>
+                {r.product.image_url ? (
+                  <img src={r.product.image_url} alt="" className="result-card-thumb" style={{ objectFit: 'contain' }} />
+                ) : (
+                  <div className="result-card-thumb">📦</div>
+                )}
+                <div className="result-card-info">
+                  <div className="result-card-name">{r.product.name || 'Unknown'}</div>
+                  <div className="result-card-brand">
+                    {r.product.brand || 'No brand'} · NOVA {r.product.nova_group || '?'}
+                  </div>
+                </div>
+                <div style={{ fontSize: 18, color: 'var(--terracotta)' }}>→</div>
+              </div>
+            ))}
+          </>
+        )}
+
+        <div style={{ marginTop: 24 }}>
+          <div className="section-label">SUPPORTED RETAILERS</div>
+          <div className="retailer-chips">
+            <div className="chip">🛒 Amazon</div>
+            <div className="chip">🏪 Walmart</div>
+            <div className="chip">🎯 Target</div>
+            <div className="chip">🥬 Instacart</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

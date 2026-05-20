@@ -32,6 +32,11 @@ _LLM_API_URL  = os.getenv(
     "https://api.element.walmart.com/v1/chat/completions",
 )
 _LLM_MODEL    = os.getenv("ELEMENT_LLM_MODEL", "gpt-4o-mini")
+
+# Direct Anthropic Claude API support — used when ELEMENT_LLM_API_KEY is unset.
+_ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+_ANTHROPIC_MODEL   = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+
 _DISCLAIMER   = "Educational information only — not medical advice."
 
 # ─── Route ────────────────────────────────────────────────────────────────────
@@ -67,13 +72,63 @@ async def nouri_chat(request: Request) -> dict:
     is_greet   = req.message.startswith("__greet")
     greet_mode = req.message.split(":")[-1] if ":" in req.message else "tab"
 
+    # Provider precedence: Element gateway → direct Anthropic → rule-based
     if _LLM_API_KEY:
         try:
             return await _llm_response(req, child, is_greet, greet_mode)
         except Exception:
-            pass  # Fall through to rule-based
+            pass
+    if _ANTHROPIC_API_KEY:
+        try:
+            return await _anthropic_response(req, child, is_greet, greet_mode)
+        except Exception:
+            pass
 
     return _rule_based_response(req, child, is_greet, greet_mode)
+
+
+# ─── Direct Anthropic call (used when ELEMENT_LLM_API_KEY is not set) ────────
+
+
+async def _anthropic_response(
+    req: ChatRequest,
+    child: ChildProfile | None,
+    is_greet: bool,
+    greet_mode: str,
+) -> dict:
+    system = _build_system_prompt(child, req.scan_data, req.scan_history, req.context)
+
+    # Anthropic API expects user/assistant only; system is a separate field
+    messages = []
+    for h in req.history:
+        role = "assistant" if h.get("role") == "nouri" else "user"
+        messages.append({"role": role, "content": h.get("content", "")})
+
+    user_msg = _greet_user_msg(greet_mode, req.context) if is_greet else req.message
+    messages.append({"role": "user", "content": user_msg})
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": _ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model":      _ANTHROPIC_MODEL,
+                "system":     system,
+                "messages":   messages,
+                "max_tokens": 500,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    text  = data["content"][0]["text"].strip()
+    chips = _extract_chips(text) or _default_chips(req.context, req.scan_data)
+    text  = re.sub(r"\[CHIPS\].*$", "", text, flags=re.DOTALL).strip()
+    return {"text": text, "chips": chips}
 
 
 # ─── Child loader ─────────────────────────────────────────────────────────────
