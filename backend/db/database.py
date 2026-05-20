@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import aiosqlite
 import json
+import os
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "poshan.sqlite"
+# DB path override via DB_PATH env var (used in production where the SQLite
+# file lives on a mounted persistent disk like /var/data on Render).
+_default_db = Path(__file__).parent.parent / "poshan.sqlite"
+DB_PATH = Path(os.getenv("DB_PATH", str(_default_db)))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS children (

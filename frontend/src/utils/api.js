@@ -1,5 +1,12 @@
 // Frontend API helper — talks to the FastAPI backend.
-// Vite proxies /api/* → http://localhost:8000 (see vite.config.js).
+//
+// Dev: Vite proxies /api/* → http://localhost:8000 (see vite.config.js).
+//      → API_BASE = '/api' (relative, proxied)
+// Prod: VITE_API_BASE_URL set at build time → absolute URL of backend.
+//      → e.g. 'https://nouri-scan-api.onrender.com'
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+const apiUrl = (path) => `${API_BASE}${path.startsWith('/') ? path : '/' + path}`;
 
 const SESSION_KEY = 'nouri:session';
 const AUTH_TOKEN_KEY = 'nouri:auth-token';
@@ -50,7 +57,7 @@ async function jsonOrThrow(r) {
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 export async function requestOtp(email, inviteCode) {
-  const r = await fetch('/api/auth/request-otp', {
+  const r = await fetch(apiUrl('/auth/request-otp'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ email, invite_code: inviteCode }),
@@ -59,7 +66,7 @@ export async function requestOtp(email, inviteCode) {
 }
 
 export async function verifyOtp(email, code) {
-  const r = await fetch('/api/auth/verify-otp', {
+  const r = await fetch(apiUrl('/auth/verify-otp'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ email, code }),
@@ -70,7 +77,7 @@ export async function verifyOtp(email, code) {
 export async function fetchMe() {
   const token = getAuthToken();
   if (!token) return null;
-  const r = await fetch('/api/auth/me', { headers: headers() });
+  const r = await fetch(apiUrl('/auth/me'), { headers: headers() });
   if (!r.ok) return null;
   return r.json();
 }
@@ -78,13 +85,13 @@ export async function fetchMe() {
 // ─── Children ──────────────────────────────────────────────────────────────
 
 export async function listChildren() {
-  const r = await fetch('/api/children/', { headers: headers() });
+  const r = await fetch(apiUrl('/children/'), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 export async function createChild(profile) {
   // profile: { name, age_band, gender, diet_type, allergies: [], goals: [], cuisine?: '' }
-  const r = await fetch('/api/children/', {
+  const r = await fetch(apiUrl('/children/'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(profile),
@@ -95,22 +102,22 @@ export async function createChild(profile) {
 // ─── Scan ──────────────────────────────────────────────────────────────────
 
 export async function scanBarcode(barcode, childId) {
-  const url = `/api/scan/barcode/${encodeURIComponent(barcode.trim())}` +
-              (childId ? `?child_id=${childId}` : '');
+  const url = apiUrl(`/scan/barcode/${encodeURIComponent(barcode.trim())}`)
+            + (childId ? `?child_id=${childId}` : '');
   const r = await fetch(url, { headers: headers() });
   return jsonOrThrow(r);
 }
 
 export async function searchProducts(query, childId) {
-  const url = `/api/scan/search?q=${encodeURIComponent(query.trim())}` +
-              (childId ? `&child_id=${childId}` : '');
+  const url = apiUrl(`/scan/search?q=${encodeURIComponent(query.trim())}`)
+            + (childId ? `&child_id=${childId}` : '');
   const r = await fetch(url, { headers: headers() });
   return jsonOrThrow(r);
 }
 
 export async function ocrLabelImage(imageDataUrl, childId) {
   const mime = (imageDataUrl.match(/^data:([^;]+);/) || [, 'image/jpeg'])[1];
-  const r = await fetch('/api/scan/ocr-image', {
+  const r = await fetch(apiUrl('/scan/ocr-image'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({
@@ -123,14 +130,14 @@ export async function ocrLabelImage(imageDataUrl, childId) {
 }
 
 export async function getScanHistory(childId, limit = 10) {
-  const r = await fetch(`/api/scan/history/${childId}?limit=${limit}`, { headers: headers() });
+  const r = await fetch(apiUrl(`/scan/history/${childId}?limit=${limit}`), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 // ─── Nouri Bot ─────────────────────────────────────────────────────────────
 
 export async function chatWithNouri({ message, context = 'result', childId, scanData, history = [] }) {
-  const r = await fetch('/api/nouri/chat', {
+  const r = await fetch(apiUrl('/nouri/chat'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({

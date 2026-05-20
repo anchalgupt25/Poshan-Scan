@@ -1,0 +1,78 @@
+# Render blueprint — deploys both services from a single repo connection.
+# Render reads this file when you choose "New → Blueprint" on the dashboard.
+#
+# Free-tier notes:
+#   • Web service sleeps after 15 min idle (cold start ~30s on wake).
+#   • Static site serves from CDN — never sleeps.
+#   • Disk: 1 GB free per service (sufficient for SQLite + cache).
+#
+# Required secrets — set these in the Render dashboard, NOT here:
+#   USDA_FDC_API_KEY        — USDA FoodData Central (free)
+#   ANTHROPIC_API_KEY       — Claude API (for OCR + bot)
+#   RESEND_API_KEY          — for OTP email delivery
+#   RESEND_FROM             — sender address ("Nouri Scan <onboarding@resend.dev>")
+#   INVITE_CODES            — comma-separated beta access codes
+#   AUTH_SECRET             — strong random secret (Render can auto-generate)
+
+services:
+  # ── Backend: FastAPI ────────────────────────────────────────────────
+  - type: web
+    name: nouri-scan-api
+    runtime: python
+    plan: free
+    region: oregon                # change to ohio/frankfurt/singapore as needed
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: nouri-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /var/data/poshan.sqlite
+      - key: FRONTEND_URL
+        # Replace with your actual static-site URL after first deploy:
+        # e.g. https://nouri-scan.onrender.com
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true       # Render auto-generates a secure random
+      - key: USDA_FDC_API_KEY
+        sync: false               # set manually in dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: Nouri Scan <onboarding@resend.dev>
+      - key: INVITE_CODES
+        value: NOURI-FAMILY,NOURI-BETA,POSHAN-2026
+      - key: AUTH_SESSION_DAYS
+        value: "30"
+      - key: OTP_TTL_MINUTES
+        value: "10"
+      - key: OTP_MAX_PER_HOUR
+        value: "5"
+
+  # ── Frontend: React static site ─────────────────────────────────────
+  - type: web
+    name: nouri-scan
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    # SPA routing — every path serves index.html (React handles routing client-side)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        # Set this to https://nouri-scan-api.onrender.com after API deploys.
+        # (Render uses this at build time — change triggers a rebuild.)
+        sync: false

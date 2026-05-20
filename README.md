@@ -136,7 +136,80 @@ Rate limit: max 5 OTP requests per email per hour. OTP TTL: 10 minutes.
 - **Coverage:** 3M+ products globally — US grocery, Indian packaged foods, EU, and more
 - **Bonus:** NOVA group, additives/E-numbers, allergen tags built in
 - Just make sure you're not behind a proxy that blocks `world.openfoodfacts.org`
-\n## 📊 Scoring Engine
+
+---
+
+## 🚀 Deploy to Render (one-time, ~10 min)
+
+This repo ships with `render.yaml` — a Render Blueprint that deploys both services for free.
+
+### Step 1 — Push to GitHub
+
+```bash
+# First-time setup (one of these):
+brew install gh && gh auth login
+# OR generate a Personal Access Token at github.com/settings/tokens (scope: repo)
+
+git push -u origin nouri-scan-react
+```
+
+### Step 2 — Sign up for Render
+
+Go to https://render.com → "Sign in with GitHub" → grant access to the `Poshan-Scan` repo.
+
+### Step 3 — Create the Blueprint
+
+1. From the Render dashboard: **New** → **Blueprint**
+2. Pick the `Poshan-Scan` repo and the `nouri-scan-react` branch
+3. Render reads `render.yaml` and shows two pending services: `nouri-scan-api` and `nouri-scan`
+4. Click **Apply** — both will start building
+
+### Step 4 — Add your secrets
+
+After the first build starts, open `nouri-scan-api` service → **Environment** tab and paste:
+
+| Key | Value |
+|---|---|
+| `USDA_FDC_API_KEY` | Your USDA key |
+| `ANTHROPIC_API_KEY` | Your `sk-ant-...` key |
+| `RESEND_API_KEY` | Your `re_...` key |
+| `INVITE_CODES` | e.g. `NOURI-FAMILY,NOURI-BETA,POSHAN-2026` |
+| `FRONTEND_URL` | (fill in after Step 5) |
+
+`AUTH_SECRET` is generated automatically by Render — leave it alone.
+
+### Step 5 — Wire the frontend to the API
+
+After both services finish their first build, you'll get URLs like:
+- API:  `https://nouri-scan-api.onrender.com`
+- Site: `https://nouri-scan.onrender.com`
+
+Now back-link them:
+1. **API service → Environment**: set `FRONTEND_URL=https://nouri-scan.onrender.com` (no trailing slash). Save → it'll redeploy.
+2. **Frontend service → Environment**: set `VITE_API_BASE_URL=https://nouri-scan-api.onrender.com`. Save → it'll rebuild.
+
+Wait ~3 minutes for both redeploys to finish.
+
+### Step 6 — Share the link
+
+Open `https://nouri-scan.onrender.com` → enter your invite code → sign in. Share the URL + one of the invite codes with anyone you want to give beta access to.
+
+### Free-tier caveats
+
+- **Backend sleeps after 15 min** of inactivity. First visitor after a sleep waits ~30s for cold start. After that, it's snappy. Not a problem for casual beta testers — paid tier ($7/mo) eliminates this if you go bigger.
+- **SQLite on disk** persists across restarts (1 GB free). For very high write volumes, swap to Render Postgres free tier later.
+- **Email delivery**: Resend free is 100/day — easily covers a closed beta. They block bounces, so use real emails.
+
+### Cost projection
+
+| Stage | Render | Resend | Anthropic | Total |
+|---|---|---|---|---|
+| Closed beta (5-20 users) | $0 (free) | $0 | ~$0.50/mo | ~$0.50/mo |
+| Public soft-launch (~500 users) | $7/mo (paid plan) | $0 | ~$5/mo | ~$12/mo |
+
+---
+
+## 📊 Scoring Engine
 
 Pure deterministic Python — no LLM required. Weights per PRD:
 
