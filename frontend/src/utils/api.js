@@ -2,6 +2,8 @@
 // Vite proxies /api/* → http://localhost:8000 (see vite.config.js).
 
 const SESSION_KEY = 'nouri:session';
+const AUTH_TOKEN_KEY = 'nouri:auth-token';
+const AUTH_EMAIL_KEY = 'nouri:auth-email';
 
 // Stable per-browser session id (anonymous user identifier for the FastAPI backend)
 export function getSessionId() {
@@ -13,12 +15,22 @@ export function getSessionId() {
   return id;
 }
 
+export function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY) || null; }
+export function getAuthEmail() { return localStorage.getItem(AUTH_EMAIL_KEY) || null; }
+export function setAuthLocal(token, email) {
+  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token); else localStorage.removeItem(AUTH_TOKEN_KEY);
+  if (email) localStorage.setItem(AUTH_EMAIL_KEY, email); else localStorage.removeItem(AUTH_EMAIL_KEY);
+}
+
 function headers(extra = {}) {
-  return {
+  const h = {
     'content-type': 'application/json',
     'x-session-id': getSessionId(),
     ...extra,
   };
+  const token = getAuthToken();
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
 }
 
 async function jsonOrThrow(r) {
@@ -32,6 +44,34 @@ async function jsonOrThrow(r) {
     err.status = r.status;
     throw err;
   }
+  return r.json();
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────
+
+export async function requestOtp(email, inviteCode) {
+  const r = await fetch('/api/auth/request-otp', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, invite_code: inviteCode }),
+  });
+  return jsonOrThrow(r);
+}
+
+export async function verifyOtp(email, code) {
+  const r = await fetch('/api/auth/verify-otp', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, code }),
+  });
+  return jsonOrThrow(r);
+}
+
+export async function fetchMe() {
+  const token = getAuthToken();
+  if (!token) return null;
+  const r = await fetch('/api/auth/me', { headers: headers() });
+  if (!r.ok) return null;
   return r.json();
 }
 

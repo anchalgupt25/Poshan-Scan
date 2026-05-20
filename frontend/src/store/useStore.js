@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { listChildren, createChild } from '../utils/api';
+import {
+  listChildren,
+  createChild,
+  fetchMe,
+  setAuthLocal,
+  getAuthToken,
+  getAuthEmail,
+} from '../utils/api';
 
 // Maps UI age-card ids → backend AgeBand enum (uses en-dash characters)
 const AGE_BAND_MAP = {
@@ -23,6 +30,47 @@ const DIET_MAP = {
 const COLOR_CLASSES = ['color-1', 'color-2', 'color-3'];
 
 const useStore = create((set, get) => ({
+  // ── Auth ─────────────────────────────────────────────────
+  authToken: getAuthToken(),
+  authEmail: getAuthEmail(),
+  authChecked: false,
+
+  setAuth: ({ token, email }) => {
+    setAuthLocal(token, email);
+    set({ authToken: token, authEmail: email, authChecked: true });
+  },
+
+  logout: () => {
+    setAuthLocal(null, null);
+    set({
+      authToken: null,
+      authEmail: null,
+      kids: [],
+      activeKidId: null,
+      isOnboarded: false,
+      currentScreen: 'splash',
+      botMessages: [],
+      recentScans: [],
+      selectedProduct: null,
+    });
+  },
+
+  bootstrapAuth: async () => {
+    const token = getAuthToken();
+    if (!token) {
+      set({ authChecked: true });
+      return;
+    }
+    // Validate stored token with /auth/me — if rejected, clear
+    const me = await fetchMe();
+    if (me?.authenticated) {
+      set({ authChecked: true, authEmail: me.email });
+    } else {
+      setAuthLocal(null, null);
+      set({ authChecked: true, authToken: null, authEmail: null });
+    }
+  },
+
   // ── Navigation ────────────────────────────────────────────
   currentScreen: 'splash',
   previousScreen: null,

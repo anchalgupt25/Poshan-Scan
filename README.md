@@ -96,6 +96,34 @@ Frontend runs at **http://localhost:5173**
 
 ---
 
+## 🔐 Email-OTP auth + invite codes
+
+Closed-beta gate: only people with a valid invite code can sign up. After the first sign-in, returning visitors get a 30-day session.
+
+**Flow:** email + invite code → 6-digit OTP via email → 30-day session token.
+
+### Setup
+
+1. **Resend (email delivery)** — sign up at https://resend.com (free 100/day, no card). Settings → API Keys → Create. Paste into `backend/.env` as `RESEND_API_KEY=re_...`. Without a key, OTPs print to the backend console (dev mode).
+2. **Invite codes** — edit `INVITE_CODES` in `backend/.env`. Comma-separated, case-insensitive. Share with beta testers.
+3. **Auth secret** — `AUTH_SECRET` is auto-generated on first install. **Regenerate for production:**
+   ```bash
+   python -c "import secrets; print(secrets.token_urlsafe(48))"
+   ```
+
+### Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/request-otp` `{email, invite_code}` | Validates invite, sends 6-digit OTP, returns `{ok, expires_in_minutes, delivery}` |
+| `POST /auth/verify-otp` `{email, code}` | Returns `{token, email}` on success |
+| `GET  /auth/me` `Authorization: Bearer <token>` | Returns `{email, authenticated}` |
+| `POST /auth/logout` | No-op server-side; frontend just discards the token |
+
+Rate limit: max 5 OTP requests per email per hour. OTP TTL: 10 minutes.
+
+---
+
 ## 🔑 API Keys
 
 ### USDA FoodData Central (recommended, free)

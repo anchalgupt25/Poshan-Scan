@@ -45,6 +45,26 @@ CREATE TABLE IF NOT EXISTS scans (
     scanned_at   TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (child_id) REFERENCES children(id)
 );
+
+-- Email-OTP auth: minimal user record + short-lived OTP store
+CREATE TABLE IF NOT EXISTS auth_users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    invite_code TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS auth_otps (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL COLLATE NOCASE,
+    code_hash   TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    consumed    INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_otps_email ON auth_otps(email);
 """
 
 

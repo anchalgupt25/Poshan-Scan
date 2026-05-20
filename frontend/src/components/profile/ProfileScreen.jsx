@@ -8,6 +8,8 @@ export default function ProfileScreen() {
   const activeKidId = useStore((s) => s.activeKidId);
   const setActiveKid = useStore((s) => s.setActiveKid);
   const resetOnboardForm = useStore((s) => s.resetOnboardForm);
+  const authEmail = useStore((s) => s.authEmail);
+  const logout = useStore((s) => s.logout);
 
   return (
     <div className="screen animate-fade-in">
@@ -42,6 +44,32 @@ export default function ProfileScreen() {
         >
           + Add another child
         </button>
+
+        {authEmail && (
+          <>
+            <div className="section-label" style={{ marginTop: 32 }}>ACCOUNT</div>
+            <div style={{
+              padding: 14,
+              background: 'var(--white)',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: 13,
+              color: 'var(--ink-soft)',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Signed in as
+              </div>
+              <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{authEmail}</div>
+            </div>
+            <button
+              className="btn-ghost"
+              onClick={() => { if (confirm('Sign out of Nouri Scan?')) logout(); }}
+              style={{ marginTop: 10, color: 'var(--coral)' }}
+            >
+              Sign out
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
