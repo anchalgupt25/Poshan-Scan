@@ -1,0 +1,43 @@
+.home-greeting {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 8px;
+}
+.home-hello {
+  font-family: var(--serif);
+  font-size: 28px; font-weight: 400; color: var(--ink);
+}
+.home-child-name {
+  font-size: 14px; color: var(--ink-muted);
+  margin-top: 2px;
+  display: flex; align-items: center;
+}
+.scan-cards { display: flex; flex-direction: column; gap: 10px; }
+.scan-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 16px;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.scan-card:hover {
+  border-color: var(--terracotta);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.scan-card-emoji { font-size: 32px; flex-shrink: 0; }
+.scan-card-info { flex: 1; }
+.scan-card-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+.scan-card-desc { font-size: 13px; color: var(--ink-muted); margin-top: 1px; }
+.scan-card-arrow { font-size: 20px; color: var(--ink-muted); flex-shrink: 0; }
+
+.tip-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 18px;
+  background: rgba(244, 216, 154, 0.2);
+  border: 1px solid rgba(244, 216, 154, 0.5);
+  border-radius: var(--radius-md);
+}
+.tip-emoji { font-size: 28px; flex-shrink: 0; }
+.tip-text { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }

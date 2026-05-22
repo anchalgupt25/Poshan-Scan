@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .api.routes import children, scan, nouri
+from .api.routes import auth, children, scan, nouri
 
 load_dotenv()
 
@@ -23,17 +23,25 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# CORS — allow local Vite dev server and any future PWA origin
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+# CORS — comma-separated list via FRONTEND_URL env var. Defaults cover local dev.
+_default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+]
+_env_origins = [u.strip() for u in os.getenv("FRONTEND_URL", "").split(",") if u.strip()]
+_allow_origins = list(dict.fromkeys(_env_origins + _default_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:5174", "http://127.0.0.1:5173"],
+    allow_origins=_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Routers
+app.include_router(auth.router)
 app.include_router(children.router)
 app.include_router(scan.router)
 app.include_router(nouri.router)

@@ -11,8 +11,12 @@ Flow for search:
 from __future__ import annotations
 
 import json
+import os
+import re
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Header, Query
+
+import httpx
+from fastapi import APIRouter, HTTPException, Header, Query, Request
 
 from ...models.product import Product, NutritionFacts, OcrScanRequest, NovaGroup
 from ...models.score import ScoreResult
@@ -20,7 +24,6 @@ from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_fi
 from ...services.product_resolver import resolve_barcode, resolve_search, build_not_found_response
 from ...core.scoring.engine import score_product
 from ...models.child import ChildProfile
-import os
 
 router = APIRouter(prefix="/scan", tags=["scan"])
 
@@ -127,6 +130,136 @@ async def scan_ocr(
         }
     finally:
         await db.close()
+
+
+@router.post("/ocr-image")
+async def scan_ocr_image(request: Request) -> dict:
+    """Parse a nutrition label photo using Claude Vision.
+
+    Body: { imageBase64: str, mimeType?: str, child_id?: int }
+    Returns: { product, score, source: 'photo-ocr' }
+    Requires ANTHROPIC_API_KEY env var.
+    """
+    body = await request.json()
+    image_b64 = body.get("imageBase64") or body.get("image_base64")
+    mime_type = body.get("mimeType") or body.get("mime_type") or "image/jpeg"
+    child_id  = body.get("child_id")
+
+    if not image_b64:
+        raise HTTPException(status_code=400, detail="imageBase64 is required")
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Photo label scanning needs an Anthropic API key for Claude Vision. "
+                "Set ANTHROPIC_API_KEY in backend/.env to enable. For now, "
+                "use barcode entry or product link instead."
+            ),
+        )
+
+    clean_b64 = re.sub(r"^data:[^;]+;base64,", "", image_b64)
+
+    system = (
+        "You are an OCR assistant for Nouri Scan. The user uploaded a photo of a "
+        "packaged food product's nutrition facts panel and/or ingredients list. "
+        "Read the image carefully and extract data as JSON.\n\n"
+        "Return ONLY valid JSON (no markdown, no commentary) in this shape:\n"
+        "{\n"
+        '  "name": "Product name",\n'
+        '  "brand": "Brand or empty string",\n'
+        '  "ingredients": "Full ingredients list as one string",\n'
+        '  "servingSizeG": number,\n'
+        '  "calories": number,\n'
+        '  "sodiumMg": number,\n'
+        '  "addedSugarG": number,\n'
+        '  "totalSugarG": number,\n'
+        '  "ironMg": number,\n'
+        '  "calciumMg": number,\n'
+        '  "proteinG": number,\n'
+        '  "fiberG": number,\n'
+        '  "fatG": number,\n'
+        '  "artificialFlavor": boolean,\n'
+        '  "artificialDyes": boolean,\n'
+        '  "novaGroupGuess": 1|2|3|4\n'
+        "}\n\n"
+        "Rules: convert DV percentages to absolute values (sodium DV=2300mg, "
+        "fiber DV=28g, iron DV=18mg, calcium DV=1300mg). If unreadable, use 0 or "
+        "empty string. Output ONLY the JSON object."
+    )
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-sonnet-4-5",
+                "max_tokens": 1500,
+                "system": system,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {
+                            "type": "base64", "media_type": mime_type, "data": clean_b64,
+                        }},
+                        {"type": "text", "text": "Extract nutrition data. JSON only."},
+                    ],
+                }],
+            },
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Claude Vision error: {resp.text[:300]}")
+        data = resp.json()
+
+    text = data["content"][0]["text"]
+    cleaned = re.sub(r"^```json\s*", "", text.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"```$", "", cleaned).strip()
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail=f"OCR returned non-JSON: {text[:300]}")
+
+    nova_int = int(parsed.get("novaGroupGuess", 4))
+    nutrition = NutritionFacts(
+        calories          = float(parsed.get("calories", 0)),
+        sodium_mg         = float(parsed.get("sodiumMg", 0)),
+        added_sugar_g     = float(parsed.get("addedSugarG", 0)),
+        total_sugar_g     = float(parsed.get("totalSugarG", 0)),
+        iron_mg           = float(parsed.get("ironMg", 0)),
+        calcium_mg        = float(parsed.get("calciumMg", 0)),
+        protein_g         = float(parsed.get("proteinG", 0)),
+        fiber_g           = float(parsed.get("fiberG", 0)),
+        fat_g             = float(parsed.get("fatG", 0)),
+        artificial_flavor = bool(parsed.get("artificialFlavor")),
+        artificial_dyes   = bool(parsed.get("artificialDyes")),
+        ultra_processed_hint = nova_int >= 4,
+    )
+    product = Product(
+        name             = parsed.get("name") or "Scanned Product",
+        brand            = parsed.get("brand") or "",
+        ingredients_text = parsed.get("ingredients") or "",
+        nova_group       = NovaGroup(nova_int) if 1 <= nova_int <= 4 else NovaGroup.ULTRA_PROCESSED,
+        nutrition        = nutrition,
+        data_source      = "photo-ocr",
+    )
+
+    db = await get_db()
+    try:
+        child = await _get_child(db, child_id)
+        result = score_product(child, product) if child else None
+    finally:
+        await db.close()
+
+    return {
+        "product": product.model_dump(),
+        "score":   result.model_dump() if result else None,
+        "source":  "photo-ocr",
+    }
 
 
 @router.get("/search")

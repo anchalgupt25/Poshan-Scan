@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import aiosqlite
 import json
+import os
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "poshan.sqlite"
+# DB path override via DB_PATH env var (used in production where the SQLite
+# file lives on a mounted persistent disk like /var/data on Render).
+_default_db = Path(__file__).parent.parent / "poshan.sqlite"
+DB_PATH = Path(os.getenv("DB_PATH", str(_default_db)))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS children (
@@ -45,6 +50,26 @@ CREATE TABLE IF NOT EXISTS scans (
     scanned_at   TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (child_id) REFERENCES children(id)
 );
+
+-- Email-OTP auth: minimal user record + short-lived OTP store
+CREATE TABLE IF NOT EXISTS auth_users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    invite_code TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS auth_otps (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL COLLATE NOCASE,
+    code_hash   TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    consumed    INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_otps_email ON auth_otps(email);
 """
 
 

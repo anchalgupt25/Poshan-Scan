@@ -123,38 +123,84 @@ def _raw_to_product(p: dict, barcode: str | None = None) -> Product | None:
 async def search_by_name(query: str, page_size: int = 8) -> list[Product]:
     """Full-text product search via OFF v2 search API.
 
-    Great for Indian packaged foods, US snacks, EU products — 3M+ items.
-    Returns up to page_size results sorted by OFF completeness score.
+    Strategy:
+      1. Run the search WITHOUT `sort_by=unique_scans_n` — that flag biases
+         results toward globally-popular products (mostly French/EU water,
+         dairy, etc.) regardless of relevance. Default OFF ranking is relevance.
+      2. Filter returned products to those that share at least one meaningful
+         word with the query — protects against noise when OFF returns
+         loose matches.
+      3. Score remaining results by word-overlap count, return top N.
     """
     if os.getenv("POSHAN_DEMO_MODE"):
         return []
 
-    params = {
-        "search_terms": query,
-        "fields": _PRODUCT_FIELDS,
-        "page_size": page_size,
-        "sort_by": "unique_scans_n",  # Most-scanned = most likely correct data
+    # Stop words: don't use these for relevance matching
+    _STOP = {
+        "the", "and", "for", "with", "oz", "lb", "pack", "packs", "count",
+        "ct", "box", "size", "each", "bar", "bars", "biscuit", "biscuits",
+        "snack", "snacks", "food", "foods", "per", "free",
     }
+    query_words = {
+        w.lower() for w in query.split()
+        if len(w) > 2 and w.lower() not in _STOP and not w.isdigit()
+    }
+
+    # Two-pass: try the full query, then a trimmed version if no relevant hits
+    attempts = [query]
+    meaningful = [w for w in query.split() if len(w) > 2 and w.lower() not in _STOP and not w.isdigit()]
+    if len(meaningful) >= 4:
+        attempts.append(" ".join(meaningful[:4]))
+    if len(meaningful) >= 2:
+        attempts.append(" ".join(meaningful[:2]))
+
     client_kwargs: dict = {"timeout": 8.0}
     if _PROXIES:
         client_kwargs["proxies"] = _PROXIES
 
     async with httpx.AsyncClient(**client_kwargs) as client:
-        try:
-            resp = await client.get(
-                _SEARCH_URL, params=params,
-                headers={"User-Agent": USER_AGENT},
-            )
-            resp.raise_for_status()
-        except (httpx.HTTPError, httpx.TimeoutException):
-            return []
+        for attempt in attempts:
+            try:
+                resp = await client.get(
+                    _SEARCH_URL,
+                    params={
+                        "search_terms": attempt,
+                        "fields": _PRODUCT_FIELDS + ",unique_scans_n",
+                        "page_size": page_size * 3,  # Over-fetch, we'll filter
+                    },
+                    headers={"User-Agent": USER_AGENT},
+                )
+                resp.raise_for_status()
+            except (httpx.HTTPError, httpx.TimeoutException):
+                continue
 
-    products = []
-    for p in resp.json().get("products", []):
-        product = _raw_to_product(p)
-        if product:
-            products.append(product)
-    return products
+            raw_products = resp.json().get("products", [])
+
+            # Score by overlap with query words
+            scored: list[tuple[int, dict]] = []
+            for p in raw_products:
+                haystack = " ".join([
+                    (p.get("product_name") or "").lower(),
+                    (p.get("brands") or "").lower(),
+                ])
+                overlap = sum(1 for w in query_words if w in haystack)
+                if overlap > 0:
+                    scored.append((overlap, p))
+
+            if not scored:
+                continue  # try the next, shorter query
+
+            scored.sort(key=lambda t: -t[0])
+
+            products: list[Product] = []
+            for _, p in scored[:page_size]:
+                product = _raw_to_product(p)
+                if product:
+                    products.append(product)
+            if products:
+                return products
+
+    return []
 
 
 async def lookup_barcode(barcode: str) -> Product | None:
