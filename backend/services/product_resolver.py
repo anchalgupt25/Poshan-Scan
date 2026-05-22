@@ -129,17 +129,23 @@ async def resolve_search(query: str, page_size: int = 8) -> tuple[list[Product],
     """Search for products by name using the best available source.
 
     Returns (products, source_label).
-    Tries OFF first (broader global coverage), then USDA, then demo.
-    """
-    # 1. Open Food Facts search — strongest global + Indian product coverage
-    products = await open_food_facts.search_by_name(query, page_size=page_size)
-    if products:
-        return products, "open_food_facts"
+    Order: USDA Branded Foods first (best for US grocery — Walmart, Target,
+    Whole Foods), then Open Food Facts (global + Indian), then demo.
 
-    # 2. USDA FDC search — strongest US branded food coverage
+    Why USDA-first: OFF's free-text search relevance is poor for US branded
+    products. Even with relevance filtering, OFF returns too many globally-
+    popular European/Asian items. USDA's FoodData Central has strict
+    relevance ranking against 1M+ FDA-regulated US labels.
+    """
+    # 1. USDA FDC search — authoritative for US branded products
     products = await usda_fdc.search_by_name(query, page_size=page_size)
     if products:
         return products, "usda_fdc"
+
+    # 2. Open Food Facts search — global + Indian fallback
+    products = await open_food_facts.search_by_name(query, page_size=page_size)
+    if products:
+        return products, "open_food_facts"
 
     # 3. Demo fallback
     products = search_demo_products(query)

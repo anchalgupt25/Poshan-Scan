@@ -181,11 +181,18 @@ export function extractSearchTermFromUrl(url) {
       .replace(/-39-/g, "'")
       .replace(/-amp-/g, ' & ')
       .replace(/[-_+]+/g, ' ')
-      .replace(/\b\d{6,}\b/g, '')
-      .replace(/\b\d+\s*(oz|lb|ct|count|pk|pack)\b/gi, '')
+      // Strip long numeric IDs (Walmart/Target item IDs etc.)
+      .replace(/\b\d{5,}\b/g, '')
+      // Strip size/quantity phrases — common URL noise that hurts search
+      .replace(/\b\d+\s*(oz|fl oz|lb|lbs|kg|g|ml|l|ct|count|pk|pack|packs|servings?|biscuits?|bars?|snacks?|pieces?)\b/gi, '')
+      // Strip patterns like "5 Packs", "4 Per Pack", "per serving"
+      .replace(/\b\d+\s+per\b/gi, '')
+      .replace(/\bper\s+(pack|serving|day|biscuit|bar|piece)s?\b/gi, '')
+      // Drop trailing standalone numbers
+      .replace(/\b\d+\b/g, '')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 80);
+      .slice(0, 60);
 
   // Amazon: /dp/{id}
   const dpIdx = segments.findIndex((s) => s === 'dp' || s === 'gp');
