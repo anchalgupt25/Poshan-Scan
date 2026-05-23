@@ -61,27 +61,30 @@ export default function ResultScreen() {
   }
 
   const { product, score } = scan;
+  const lowConfidence = scan.low_confidence || (!score && scan.source === 'photo-ocr');
+  const ocrNote = scan.ocr_note;
   const grade = score?.grade || 'C';
   const scoreNum = Math.round(score?.score ?? 0);
   const gradeLabel = score?.grade_label || '';
   const dims = score?.dimensions || {};
   const flags = score?.flags || [];
   const insights = score?.nutrient_insights || [];
-  const badge = badgeFromFlags(flags);
+  const badge = lowConfidence
+    ? { cls: 'warn', text: 'Couldn\'t read label' }
+    : badgeFromFlags(flags);
 
   const servingG = product?.nutrition?.serving_size_g || product?.serving_size_g || 30;
   const servingsPerPkg = Math.max(1, Math.round((product?.package_size_g || servingG * 5) / servingG));
   const mult = servingMode === 'package' ? servingsPerPkg : 1;
 
-  // Format the value with serving multiplier
+  // Format the value with serving multiplier.
+  // When the OCR scan returned no data, render an em-dash instead of "0.00mg".
   const fmtInsight = (ins) => {
     const raw = parseFloat(ins.value);
-    if (!isNaN(raw)) {
-      const scaled = raw * mult;
-      const rounded = scaled < 1 ? scaled.toFixed(2) : scaled.toFixed(scaled < 10 ? 1 : 0);
-      return `${rounded}${ins.unit || ''}`;
-    }
-    return `${ins.value}${ins.unit || ''}`;
+    if (isNaN(raw) || raw === 0) return '—';
+    const scaled = raw * mult;
+    const rounded = scaled < 1 ? scaled.toFixed(2) : scaled.toFixed(scaled < 10 ? 1 : 0);
+    return `${rounded}${ins.unit || ''}`;
   };
 
   return (
@@ -95,7 +98,7 @@ export default function ResultScreen() {
 
       <div className="scrollable" style={{ padding: '0 24px 32px' }}>
         {/* Score header */}
-        <div className="result-header" style={{ background: gradeBg(grade) }}>
+        <div className="result-header" style={{ background: lowConfidence ? 'rgba(244, 216, 154, 0.25)' : gradeBg(grade) }}>
           <div className="result-product-row">
             <div className="result-thumb">{product.image_url ? <img src={product.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '📦'}</div>
             <div className="result-product-info">
@@ -105,82 +108,123 @@ export default function ResultScreen() {
           </div>
           <div className={`badge ${badge.cls}`}>{badge.text}</div>
 
-          <div className="result-score-ring">
-            <svg viewBox="0 0 120 120" className="score-svg">
-              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" strokeWidth="8" />
-              <circle
-                cx="60" cy="60" r="52"
-                fill="none"
-                stroke={gradeColor(grade)}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${(scoreNum / 100) * 327} 327`}
-                transform="rotate(-90 60 60)"
-                style={{ transition: 'stroke-dasharray 1s ease' }}
-              />
-            </svg>
-            <div className="score-center">
-              <div className="score-number" style={{ color: gradeColor(grade) }}>{scoreNum}</div>
-              <div className="score-grade-letter" style={{ color: gradeColor(grade) }}>Grade {grade}</div>
+          {lowConfidence ? (
+            <div style={{ textAlign: 'center', padding: '24px 8px' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📸</div>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>
+                Couldn't read the nutrition label
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5, marginBottom: 16, padding: '0 8px' }}>
+                {ocrNote || "I could see the package but couldn't see the white Nutrition Facts panel or full ingredients list. Please retake the photo of the BACK of the package."}
+              </div>
+              <button
+                className="btn-primary"
+                style={{ maxWidth: 260, margin: '0 auto' }}
+                onClick={() => {
+                  useStore.getState().setScanMethod('photo');
+                  useStore.getState().navigate('scanning');
+                }}
+              >
+                📷 Retake photo
+              </button>
+              <button
+                className="btn-ghost"
+                style={{ maxWidth: 260, margin: '8px auto 0' }}
+                onClick={() => {
+                  useStore.getState().setScanMethod('barcode');
+                  useStore.getState().navigate('scanning');
+                }}
+              >
+                Or scan barcode instead
+              </button>
             </div>
-          </div>
-          <div className="score-label">{gradeLabel}</div>
-
-          <div className="dim-bars">
-            {[
-              { name: 'Nutrition',  val: dims.nutrition },
-              { name: 'Ingredients', val: dims.ingredients },
-              { name: 'Processing', val: dims.processing },
-              { name: 'Age Safety', val: dims.age_safety },
-            ].map((d) => {
-              const v = d.val ?? 0;
-              return (
-                <div key={d.name} className="dim-bar-row">
-                  <div className="dim-bar-name">{d.name}</div>
-                  <div className="dim-bar-track">
-                    <div
-                      className="dim-bar-fill"
-                      style={{
-                        width: `${v}%`,
-                        background: v >= 70 ? 'var(--sage)' : v >= 40 ? 'var(--butter)' : 'var(--coral)',
-                        animation: `progressFill 1s ease both`,
-                      }}
-                    />
-                  </div>
-                  <div className="dim-bar-val">{Math.round(v)}</div>
+          ) : (
+            <>
+              <div className="result-score-ring">
+                <svg viewBox="0 0 120 120" className="score-svg">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" strokeWidth="8" />
+                  <circle
+                    cx="60" cy="60" r="52"
+                    fill="none"
+                    stroke={gradeColor(grade)}
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(scoreNum / 100) * 327} 327`}
+                    transform="rotate(-90 60 60)"
+                    style={{ transition: 'stroke-dasharray 1s ease' }}
+                  />
+                </svg>
+                <div className="score-center">
+                  <div className="score-number" style={{ color: gradeColor(grade) }}>{scoreNum}</div>
+                  <div className="score-grade-letter" style={{ color: gradeColor(grade) }}>Grade {grade}</div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+              <div className="score-label">{gradeLabel}</div>
+
+              <div className="dim-bars">
+                {[
+                  { name: 'Nutrition',  val: dims.nutrition },
+                  { name: 'Ingredients', val: dims.ingredients },
+                  { name: 'Processing', val: dims.processing },
+                  { name: 'Age Safety', val: dims.age_safety },
+                ].map((d) => {
+                  const v = d.val ?? 0;
+                  return (
+                    <div key={d.name} className="dim-bar-row">
+                      <div className="dim-bar-name">{d.name}</div>
+                      <div className="dim-bar-track">
+                        <div
+                          className="dim-bar-fill"
+                          style={{
+                            width: `${v}%`,
+                            background: v >= 70 ? 'var(--sage)' : v >= 40 ? 'var(--butter)' : 'var(--coral)',
+                            animation: `progressFill 1s ease both`,
+                          }}
+                        />
+                      </div>
+                      <div className="dim-bar-val">{Math.round(v)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Verdict text */}
-        {score?.verdict_text && (
+        {/* Verdict text — only when we have a real score */}
+        {score?.verdict_text && !lowConfidence && (
           <div className="verdict-box" style={{ marginBottom: 16 }}>
             {score.verdict_text}
           </div>
         )}
 
-        {/* Serving toggle */}
-        <div className="serving-toggle">
-          <button
-            className={`serving-btn ${servingMode === 'serving' ? 'active' : ''}`}
-            onClick={() => setServingMode('serving')}
-          >
-            Per Serving ({servingG}g)
-          </button>
-          <button
-            className={`serving-btn ${servingMode === 'package' ? 'active' : ''}`}
-            onClick={() => setServingMode('package')}
-          >
-            Whole Package
-          </button>
-        </div>
+        {/* Serving toggle — hide when we don't have real nutrition data */}
+        {!lowConfidence && (
+          <div className="serving-toggle">
+            <button
+              className={`serving-btn ${servingMode === 'serving' ? 'active' : ''}`}
+              onClick={() => setServingMode('serving')}
+            >
+              Per Serving ({servingG}g)
+            </button>
+            <button
+              className={`serving-btn ${servingMode === 'package' ? 'active' : ''}`}
+              onClick={() => setServingMode('package')}
+            >
+              Whole Package
+            </button>
+          </div>
+        )}
 
-        {/* Nutrition insights — 2x2 */}
+        {/* Nutrition insights — 2x2. Skip entirely when OCR was partial. */}
+        {!lowConfidence && (
         <div className="section-label" style={{ marginTop: 20 }}>
           NUTRITION {servingMode === 'package' ? '(WHOLE PACKAGE)' : '(PER SERVING)'}
         </div>
+        )}
+        {!lowConfidence && (
+        <>
+
         {insights.length > 0 ? (
           <>
             <div className="insight-grid">
@@ -215,9 +259,11 @@ export default function ResultScreen() {
             No detailed nutrition data available for this product.
           </div>
         )}
+        </>
+        )}
 
-        {/* Safety checks — 2x2 */}
-        {flags.length > 0 && (
+        {/* Safety checks — 2x2. Skip when OCR was partial. */}
+        {!lowConfidence && flags.length > 0 && (
           <>
             <div className="section-label" style={{ marginTop: 24 }}>SAFETY CHECKS</div>
             <div className="check-grid">

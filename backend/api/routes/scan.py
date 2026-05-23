@@ -248,10 +248,22 @@ async def scan_ocr_image(request: Request) -> dict:
         data_source      = "photo-ocr",
     )
 
+    # Detect low-confidence OCR: the user likely uploaded the FRONT of the box
+    # (or a blurry/partial photo) and Claude couldn't see the Nutrition Facts
+    # panel. We refuse to score in that case — a fake "all zeros" looks like a
+    # clean product to the scoring engine and produces a misleading Grade A.
+    nutrient_signal = (
+        nutrition.calories + nutrition.sodium_mg + nutrition.total_sugar_g
+        + nutrition.protein_g + nutrition.fat_g + nutrition.fiber_g
+        + nutrition.iron_mg + nutrition.calcium_mg
+    )
+    has_ingredients = bool((parsed.get("ingredients") or "").strip())
+    low_confidence  = nutrient_signal < 5 and not has_ingredients
+
     db = await get_db()
     try:
         child = await _get_child(db, child_id)
-        result = score_product(child, product) if child else None
+        result = score_product(child, product) if (child and not low_confidence) else None
     finally:
         await db.close()
 
@@ -259,6 +271,12 @@ async def scan_ocr_image(request: Request) -> dict:
         "product": product.model_dump(),
         "score":   result.model_dump() if result else None,
         "source":  "photo-ocr",
+        "low_confidence": low_confidence,
+        "ocr_note": (
+            "I could see the package but couldn't read the Nutrition Facts panel "
+            "or ingredients list. Please retake the photo of the BACK of the "
+            "package showing the white nutrition label and full ingredients."
+        ) if low_confidence else None,
     }
 
 
