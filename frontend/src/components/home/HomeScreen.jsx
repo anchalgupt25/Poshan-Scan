@@ -5,9 +5,9 @@ import BotFab from '../shared/BotFab';
 import './home.css';
 
 const scanMethods = [
-  { id: 'barcode', emoji: '📷', title: 'Scan Barcode', desc: 'Point at any packaged food' },
-  { id: 'photo',   emoji: '🏷️', title: 'Photo Label',   desc: 'Snap the nutrition label' },
-  { id: 'link',    emoji: '🔗', title: 'Paste Link',    desc: 'Amazon, Walmart, Target, Instacart' },
+  { id: 'barcode', emoji: '🔢', title: 'Enter Barcode',  desc: 'Type the UPC from any package' },
+  { id: 'photo',   emoji: '📷', title: 'Scan Label',     desc: 'Use camera to read the nutrition label' },
+  { id: 'link',    emoji: '🔗', title: 'Paste Link',     desc: 'Amazon, Walmart, Target, Instacart URLs' },
 ];
 
 export default function HomeScreen() {

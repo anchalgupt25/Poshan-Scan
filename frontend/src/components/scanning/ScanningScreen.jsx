@@ -196,7 +196,7 @@ export default function ScanningScreen() {
           )}
 
           <div className="scan-note" style={{ marginTop: 16 }}>
-            Live camera barcode reader is Phase 2. For now, type a real UPC barcode (e.g. <code>0085239073209</code> for Goldfish) and we'll fetch it live from Open Food Facts + USDA.
+            <strong>Tip:</strong> Live camera barcode scanning is on the way. For now, type the UPC barcode (the 12–13 digit number under the bars on the back of the package) and we'll look it up instantly across USDA + Open Food Facts. Try <code>0085239073209</code> (Goldfish) to test.
           </div>
         </div>
       </div>
@@ -221,12 +221,27 @@ export default function ScanningScreen() {
             <>
               <div className="photo-upload-area" onClick={() => fileInputRef.current?.click()}>
                 <div className="photo-upload-icon">📸</div>
-                <div className="photo-upload-title">Take or upload a photo</div>
+                <div className="photo-upload-title">Snap the nutrition label</div>
                 <div className="photo-upload-desc">
-                  Photograph the ingredients list or nutrition facts panel
+                  Aim the camera at the back of the package — the white Nutrition Facts panel and ingredients list.
                 </div>
-                <button className="btn-primary" style={{ marginTop: 16, maxWidth: 260 }}>
-                  Choose Photo
+                <button className="btn-primary" style={{ marginTop: 16, maxWidth: 280 }}>
+                  📷 Open camera
+                </button>
+                <button
+                  className="btn-ghost"
+                  style={{ marginTop: 8, maxWidth: 280 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                      // Restore capture so the next "Open camera" still works
+                      setTimeout(() => fileInputRef.current?.setAttribute('capture', 'environment'), 500);
+                    }
+                  }}
+                >
+                  Or upload from photos
                 </button>
               </div>
               <input
@@ -240,15 +255,13 @@ export default function ScanningScreen() {
               <div className="scan-tip">
                 <div className="scan-tip-icon">💡</div>
                 <div>
-                  <strong>Tips for best results:</strong>
+                  <strong>For best results:</strong>
                   <ul style={{ marginTop: 6, paddingLeft: 18, fontSize: 13, color: 'var(--ink-muted)' }}>
-                    <li>Good lighting, no glare</li>
-                    <li>Get the full panel in frame</li>
-                    <li>Hold steady for sharp focus</li>
+                    <li>Photograph the <strong>back of the package</strong>, not the front</li>
+                    <li>Good lighting, no glare on the label</li>
+                    <li>Fit the whole Nutrition Facts table in frame</li>
+                    <li>Hold steady so the text is sharp</li>
                   </ul>
-                  <div style={{ fontSize: 12, marginTop: 8, color: 'var(--ink-muted)' }}>
-                    Powered by Claude Vision when <code>ANTHROPIC_API_KEY</code> is set.
-                  </div>
                 </div>
               </div>
             </>
@@ -260,7 +273,7 @@ export default function ScanningScreen() {
                   <>
                     <div className="processing-spinner" />
                     <div>Reading nutrition label…</div>
-                    <div className="photo-status-sub">Claude Vision is parsing the panel</div>
+                    <div className="photo-status-sub">Extracting ingredients and nutrients — usually takes ~5 seconds</div>
                   </>
                 )}
                 {photoStatus === 'done' && (
