@@ -5,6 +5,11 @@ import './auth.css';
 
 export default function AuthScreen() {
   const setAuth = useStore((s) => s.setAuth);
+  const navigate = useStore((s) => s.navigate);
+  const authIntent = useStore((s) => s.authIntent);
+  const loadKidsFromServer = useStore((s) => s.loadKidsFromServer);
+
+  const isSignin = authIntent === 'signin';
 
   const [stage, setStage] = useState('email');   // 'email' | 'otp'
   const [email, setEmail] = useState('');
@@ -54,7 +59,26 @@ export default function AuthScreen() {
     try {
       const r = await verifyOtp(email, finalCode);
       setAuth({ token: r.token, email: r.email });
-      // Store immediately drives navigation via App.jsx (loadKidsFromServer)
+
+      // Decide where to land based on what kids exist on the server.
+      const kidCount = await loadKidsFromServer({ navigateOnLoad: false });
+
+      if (kidCount > 1) {
+        // Multiple kids — make them pick
+        navigate('kidSelector');
+      } else if (kidCount === 1) {
+        // Exactly one kid — straight to home
+        navigate('home');
+      } else if (isSignin) {
+        // "I already have an account" but no kids on the server — gently
+        // hand them off to onboarding to set up their first child.
+        setError("We couldn't find any child profiles for this email. Let's set one up.");
+        setTimeout(() => navigate('onboard1'), 1500);
+        return; // keep busy true briefly so the message is readable
+      } else {
+        // Signup flow — go through onboarding
+        navigate('onboard1');
+      }
     } catch (e) {
       setError(e.message || 'That code is wrong.');
       setBusy(false);
@@ -91,6 +115,15 @@ export default function AuthScreen() {
   return (
     <div className="screen auth-screen animate-fade-in">
       <div className="scrollable" style={{ padding: 0 }}>
+        <button
+          className="nav-back"
+          onClick={() => navigate('splash')}
+          style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}
+          aria-label="Back to splash"
+        >
+          ←
+        </button>
+
         <div className="auth-brand">
           <div className="auth-logo">🔬</div>
           <div className="auth-brand-name">Nouri<em>Scan</em></div>
@@ -99,9 +132,14 @@ export default function AuthScreen() {
 
         {stage === 'email' ? (
           <div className="auth-card">
-            <div className="auth-title">Sign in to <em>Nouri</em></div>
+            <div className="auth-title">
+              {isSignin ? 'Welcome back to ' : 'Sign in to '}
+              <em>Nouri</em>
+            </div>
             <div className="auth-subtitle">
-              Enter your email and your invite code. We'll send a 6-digit code to sign you in — no password needed.
+              {isSignin
+                ? "Enter the email you signed up with. We'll send a 6-digit code — no password needed."
+                : "Enter your email and your invite code. We'll send a 6-digit code to sign you in — no password needed."}
             </div>
 
             <div className="auth-field">
@@ -115,22 +153,30 @@ export default function AuthScreen() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && document.getElementById('invite-input')?.focus()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (isSignin) handleRequestOtp();
+                    else document.getElementById('invite-input')?.focus();
+                  }
+                }}
               />
             </div>
-            <div className="auth-field">
-              <label className="auth-field-label">Invite code</label>
-              <input
-                id="invite-input"
-                type="text"
-                autoCapitalize="characters"
-                className="text-input"
-                placeholder="e.g. NOURI-FAMILY"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleRequestOtp()}
-              />
-            </div>
+
+            {!isSignin && (
+              <div className="auth-field">
+                <label className="auth-field-label">Invite code</label>
+                <input
+                  id="invite-input"
+                  type="text"
+                  autoCapitalize="characters"
+                  className="text-input"
+                  placeholder="e.g. NOURI-FAMILY"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRequestOtp()}
+                />
+              </div>
+            )}
 
             {error && <div className="auth-error">⚠️ {error}</div>}
 
@@ -138,14 +184,30 @@ export default function AuthScreen() {
               className="btn-primary"
               style={{ marginTop: 18 }}
               onClick={handleRequestOtp}
-              disabled={busy || !email || !inviteCode}
+              disabled={busy || !email || (!isSignin && !inviteCode)}
             >
               {busy ? 'Sending code…' : 'Send my code'}
             </button>
 
             <div className="auth-meta">
-              No invite code? Ask whoever shared Nouri Scan with you, or email{' '}
-              <a href="mailto:hello@nouriscan.app">hello@nouriscan.app</a>.
+              {isSignin ? (
+                <>
+                  New to Nouri Scan?{' '}
+                  <button
+                    onClick={() => {
+                      useStore.getState().setAuthIntent('signup');
+                      navigate('splash');
+                    }}
+                  >
+                    Set up a profile
+                  </button>
+                </>
+              ) : (
+                <>
+                  No invite code? Ask whoever shared Nouri Scan with you, or email{' '}
+                  <a href="mailto:hello@nouriscan.app">hello@nouriscan.app</a>.
+                </>
+              )}
             </div>
           </div>
         ) : (

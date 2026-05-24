@@ -35,6 +35,11 @@ const useStore = create((set, get) => ({
   authEmail: getAuthEmail(),
   authChecked: false,
 
+  // 'signup' = new user setting up first child after OTP
+  // 'signin' = returning user with existing profile(s); after OTP, go straight to home/kid-selector
+  authIntent: 'signup',
+  setAuthIntent: (intent) => set({ authIntent: intent }),
+
   setAuth: ({ token, email }) => {
     setAuthLocal(token, email);
     set({ authToken: token, authEmail: email, authChecked: true });
@@ -83,7 +88,7 @@ const useStore = create((set, get) => ({
   hasMultipleKids: false,
   isOnboarded: false,
 
-  loadKidsFromServer: async () => {
+  loadKidsFromServer: async ({ navigateOnLoad = true } = {}) => {
     try {
       const remote = await listChildren();
       if (Array.isArray(remote) && remote.length > 0) {
@@ -99,16 +104,22 @@ const useStore = create((set, get) => ({
           initial: (c.name || '?')[0]?.toUpperCase() || '?',
           colorClass: COLOR_CLASSES[i % COLOR_CLASSES.length],
         }));
-        set({
+        const next = {
           kids,
           activeKidId: kids[0].id,
           hasMultipleKids: kids.length > 1,
           isOnboarded: true,
-          currentScreen: 'home',
-        });
+        };
+        // Only auto-navigate when called from a "bootstrap on app load" path —
+        // explicit auth/onboarding flows decide their own destination.
+        if (navigateOnLoad) next.currentScreen = 'home';
+        set(next);
+        return kids.length;
       }
+      return 0;
     } catch (err) {
       console.warn('[store] could not load kids from server:', err);
+      return 0;
     }
   },
 

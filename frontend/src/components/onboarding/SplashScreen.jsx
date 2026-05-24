@@ -4,6 +4,17 @@ import './onboarding.css';
 
 export default function SplashScreen() {
   const navigate = useStore((s) => s.navigate);
+  const setAuthIntent = useStore((s) => s.setAuthIntent);
+
+  const handleSignup = () => {
+    setAuthIntent('signup');
+    navigate('auth');
+  };
+  const handleSignin = () => {
+    setAuthIntent('signin');
+    navigate('auth');
+  };
+
   return (
     <div className="screen splash-screen">
       <div className="splash-content" style={{ animation: 'splashRise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1)' }}>
@@ -18,10 +29,10 @@ export default function SplashScreen() {
         </div>
       </div>
       <div className="splash-bottom">
-        <button className="btn-primary" onClick={() => navigate('onboard1')}>
+        <button className="btn-primary" onClick={handleSignup}>
           🔬 Set Up My Child's Profile
         </button>
-        <button className="btn-ghost" onClick={() => navigate('onboard1')} style={{ marginTop: 10 }}>
+        <button className="btn-ghost" onClick={handleSignin} style={{ marginTop: 10 }}>
           I already have an account
         </button>
       </div>

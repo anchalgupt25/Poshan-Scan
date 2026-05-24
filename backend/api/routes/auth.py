@@ -47,15 +47,27 @@ async def request_otp(request: Request) -> dict:
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email is required.")
-    if not code:
-        raise HTTPException(status_code=400, detail="Invite code is required.")
-
-    allowed = _allowed_invite_codes()
-    if allowed and code not in allowed:
-        raise HTTPException(status_code=403, detail="That invite code isn't valid. Double-check or request one.")
 
     db = await get_db()
     try:
+        # Existing users (already registered with a valid invite code) can
+        # sign in with just email — no need to re-enter the invite code.
+        existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+
+        if not existing:
+            # New email — invite code is required and must be on the allowlist.
+            if not code:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invite code required for new accounts. If you signed up before, just enter your email.",
+                )
+            allowed = _allowed_invite_codes()
+            if allowed and code not in allowed:
+                raise HTTPException(
+                    status_code=403,
+                    detail="That invite code isn't valid. Double-check or request one.",
+                )
+
         # Rate-limit: max N OTP requests per email per hour
         recent = await fetch_one(
             db,
@@ -73,8 +85,7 @@ async def request_otp(request: Request) -> dict:
             (email, hash_otp(otp), expires_at),
         )
 
-        # Upsert the user record so we know who's been invited
-        existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+        # Insert the user record on first signup so future visits skip the code
         if not existing:
             await execute(
                 db,
@@ -90,6 +101,7 @@ async def request_otp(request: Request) -> dict:
             "ok": True,
             "expires_in_minutes": _OTP_TTL_MINUTES,
             "delivery": "console" if info == "dev-console" else "email",
+            "is_returning_user": existing is not None,
         }
     finally:
         await db.close()
