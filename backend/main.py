@@ -23,18 +23,33 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# CORS — comma-separated list via FRONTEND_URL env var. Defaults cover local dev.
+# CORS configuration.
+#
+# Strategy: a fixed safe-by-default list of known origins (production custom
+# domain + Render preview URL + local dev) PLUS anything operators add via
+# FRONTEND_URL env var. Hardcoding the production origins means a typo or a
+# missed redeploy of the env var doesn't break the live site.
+#
+# We also use `allow_origin_regex` so any *.onrender.com preview deploy and
+# any subdomain of nouriscan.app (e.g. www., staging.) auto-works without
+# additional configuration.
 _default_origins = [
+    "https://nouriscan.app",
+    "https://www.nouriscan.app",
+    "https://nouri-scan.onrender.com",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5173",
 ]
 _env_origins = [u.strip() for u in os.getenv("FRONTEND_URL", "").split(",") if u.strip()]
-_allow_origins = list(dict.fromkeys(_env_origins + _default_origins))
+_allow_origins = list(dict.fromkeys(_default_origins + _env_origins))
+
+_allow_origin_regex = r"https://([a-z0-9-]+\.)?nouriscan\.app|https://[a-z0-9-]+\.onrender\.com"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,
+    allow_origin_regex=_allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
