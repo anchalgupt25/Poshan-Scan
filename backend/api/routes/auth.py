@@ -36,6 +36,19 @@ def _allowed_invite_codes() -> set[str]:
     return {c.strip().upper() for c in raw.split(",") if c.strip()}
 
 
+def _persistent_known_emails() -> set[str]:
+    """Env-var-backed list of emails that are pre-approved to skip the invite
+    gate. Stopgap until the DB is on persistent storage (Render free tier wipes
+    SQLite on every redeploy). Operator updates KNOWN_USERS in the dashboard
+    as new beta testers sign up.
+
+    Format: comma-separated emails, case-insensitive.
+    Example:  KNOWN_USERS=anchalgupt25@gmail.com,test@example.com
+    """
+    raw = os.getenv("KNOWN_USERS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 
@@ -53,6 +66,17 @@ async def request_otp(request: Request) -> dict:
         # Existing users (already registered with a valid invite code) can
         # sign in with just email — no need to re-enter the invite code.
         existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+
+        # Stopgap: also accept emails listed in KNOWN_USERS env var. This
+        # survives Render redeploys (ephemeral SQLite) so returning beta
+        # testers don't lose access just because the DB was wiped.
+        if not existing and email in _persistent_known_emails():
+            await execute(
+                db,
+                "INSERT INTO auth_users (email, invite_code) VALUES (?, ?)",
+                (email, "PRESEEDED"),
+            )
+            existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
 
         if not existing:
             # New email — invite code is required and must be on the allowlist.

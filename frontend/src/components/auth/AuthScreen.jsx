@@ -19,7 +19,12 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [info, setInfo]   = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  // Surface the invite-code field on the signin path if the backend tells us
+  // it doesn't recognise this email (most often because the ephemeral SQLite
+  // on Render's free tier got wiped on the last redeploy).
+  const [forceInviteCode, setForceInviteCode] = useState(false);
   const otpRefs = useRef([]);
+  const showInviteField = !isSignin || forceInviteCode;
 
   // Resend cooldown ticker
   useEffect(() => {
@@ -31,7 +36,9 @@ export default function AuthScreen() {
   const handleRequestOtp = async () => {
     setError(''); setInfo('');
     if (!email.includes('@')) { setError('Please enter a valid email.'); return; }
-    if (!inviteCode.trim()) { setError('Invite code is required.'); return; }
+    if (showInviteField && !inviteCode.trim()) {
+      setError('Invite code is required.'); return;
+    }
     setBusy(true);
     try {
       const r = await requestOtp(email, inviteCode);
@@ -45,7 +52,17 @@ export default function AuthScreen() {
       );
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (e) {
-      setError(e.message || 'Could not send code. Try again.');
+      const msg = e.message || 'Could not send code. Try again.';
+      // Backend tells us the email isn't registered yet → reveal the invite-
+      // code field inline instead of forcing them back to the splash screen.
+      if (isSignin && /invite code required/i.test(msg)) {
+        setForceInviteCode(true);
+        setError(
+          "We don't have an account for this email yet. Enter your invite code below — once you set up your first child profile, we'll remember you next time."
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setBusy(false);
     }
@@ -155,14 +172,14 @@ export default function AuthScreen() {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (isSignin) handleRequestOtp();
-                    else document.getElementById('invite-input')?.focus();
+                    if (showInviteField) document.getElementById('invite-input')?.focus();
+                    else handleRequestOtp();
                   }
                 }}
               />
             </div>
 
-            {!isSignin && (
+            {showInviteField && (
               <div className="auth-field">
                 <label className="auth-field-label">Invite code</label>
                 <input
@@ -184,7 +201,7 @@ export default function AuthScreen() {
               className="btn-primary"
               style={{ marginTop: 18 }}
               onClick={handleRequestOtp}
-              disabled={busy || !email || (!isSignin && !inviteCode)}
+              disabled={busy || !email || (showInviteField && !inviteCode)}
             >
               {busy ? 'Sending code…' : 'Send my code'}
             </button>
@@ -254,7 +271,7 @@ export default function AuthScreen() {
                 <button onClick={handleRequestOtp} disabled={busy}>Resend code</button>
               )}
               {' · '}
-              <button onClick={() => { setStage('email'); setError(''); setInfo(''); }}>
+              <button onClick={() => { setStage('email'); setError(''); setInfo(''); setForceInviteCode(false); }}>
                 Change email
               </button>
             </div>
