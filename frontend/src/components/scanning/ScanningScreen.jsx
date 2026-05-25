@@ -157,16 +157,34 @@ export default function ScanningScreen() {
           </div>
 
           <div className="section-label">ENTER BARCODE MANUALLY</div>
+
+          <div className="barcode-example">
+            <div className="barcode-example-title">Where to find the barcode</div>
+            <div className="barcode-visual">
+              <div className="barcode-bars">||||| || ||||| || ||| || |||||</div>
+              <div className="barcode-digits">
+                <span className="barcode-digit-edge">0</span>
+                <span>85239 07320</span>
+                <span className="barcode-digit-edge">9</span>
+              </div>
+            </div>
+            <div className="barcode-example-note">
+              Look on the back or side of the package. Type <strong>every digit</strong>{' '}
+              including the small numbers on the far left and far right — usually 12 digits in the US.
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               type="tel"
               inputMode="numeric"
               className="text-input"
-              placeholder="e.g. 028000010019"
+              placeholder="12-digit UPC, e.g. 028000010019"
               value={manualBarcode}
               onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
               disabled={status === 'looking'}
               style={{ flex: 1 }}
+              maxLength={14}
             />
             <button
               className="btn-primary"
@@ -176,6 +194,19 @@ export default function ScanningScreen() {
             >
               {status === 'looking' ? '…' : 'Look up'}
             </button>
+          </div>
+
+          <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 12 }}>
+            Try one of these to test: <button
+              type="button"
+              onClick={() => setManualBarcode('028000010019')}
+              style={{ background: 'var(--cream-deep)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'monospace', color: 'var(--ink)', border: 'none', cursor: 'pointer', marginRight: 4 }}
+            >028000010019</button> (Honey Nut Cheerios) ·{' '}
+            <button
+              type="button"
+              onClick={() => setManualBarcode('0085239073209')}
+              style={{ background: 'var(--cream-deep)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'monospace', color: 'var(--ink)', border: 'none', cursor: 'pointer' }}
+            >0085239073209</button> (Goldfish)
           </div>
 
           {status === 'looking' && (
@@ -194,10 +225,6 @@ export default function ScanningScreen() {
               <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6 }}>{errorMsg}</div>
             </div>
           )}
-
-          <div className="scan-note" style={{ marginTop: 16 }}>
-            <strong>Tip:</strong> Live camera barcode scanning is on the way. For now, type the UPC barcode (the 12–13 digit number under the bars on the back of the package) and we'll look it up instantly across USDA + Open Food Facts. Try <code>0085239073209</code> (Goldfish) to test.
-          </div>
         </div>
       </div>
     );

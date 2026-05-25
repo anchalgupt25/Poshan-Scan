@@ -77,13 +77,19 @@ async def scan_barcode(
         child = await _get_child(db, child_id)
         result = score_product(child, product) if child else None
 
+        # Persist enough product metadata in the scan row so the home-screen
+        # history list has real product names/brands (the raw ScoreResult
+        # doesn't carry product info).
+        scan_payload: dict = result.model_dump() if result else {}
+        scan_payload["product_name"] = product.name
+        scan_payload["brand"] = product.brand or ""
+
         session = x_session_id or "anonymous"
         await execute(
             db,
             "INSERT INTO scans (user_session, child_id, barcode, scan_type, score_result) "
             "VALUES (?, ?, ?, ?, ?)",
-            (session, child_id, barcode, "barcode",
-             json.dumps(result.model_dump() if result else {})),
+            (session, child_id, barcode, "barcode", json.dumps(scan_payload)),
         )
 
         return {

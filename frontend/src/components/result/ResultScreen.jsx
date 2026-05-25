@@ -68,14 +68,37 @@ export default function ResultScreen() {
   const gradeLabel = score?.grade_label || '';
   const dims = score?.dimensions || {};
   const flags = score?.flags || [];
-  const insights = score?.nutrient_insights || [];
+  const rawInsights = score?.nutrient_insights || [];
+
+  // Top-4 priority: parents care most about Sodium, Sugar, Iron, Calcium,
+  // Protein in roughly that order for child nutrition. Reorder the insight
+  // list so these always come first when present, then anything else after.
+  const PRIORITY_ORDER = ['sodium', 'iron', 'protein', 'calcium', 'sugar', 'fiber', 'fat'];
+  const insights = (() => {
+    const remaining = [...rawInsights];
+    const picked = [];
+    for (const key of PRIORITY_ORDER) {
+      const idx = remaining.findIndex((ins) =>
+        (ins.name || '').toLowerCase().includes(key)
+      );
+      if (idx >= 0) picked.push(...remaining.splice(idx, 1));
+    }
+    return [...picked, ...remaining];
+  })();
   const badge = lowConfidence
     ? { cls: 'warn', text: 'Couldn\'t read label' }
     : badgeFromFlags(flags);
 
-  const servingG = product?.nutrition?.serving_size_g || product?.serving_size_g || 30;
-  const servingsPerPkg = Math.max(1, Math.round((product?.package_size_g || servingG * 5) / servingG));
-  const mult = servingMode === 'package' ? servingsPerPkg : 1;
+  // Only show "(Xg)" on the toggle if the backend actually gave us a serving
+  // size — never invent "30g". And only allow the Whole Package toggle when
+  // we know how many servings are in a package; otherwise the multiplier
+  // would be a guess (which was producing wrong iron values like 0.7mg vs
+  // the label's 0.3mg).
+  const servingG = Number(product?.nutrition?.serving_size_g || product?.serving_size_g || 0) || null;
+  const packageG = Number(product?.package_size_g || 0) || null;
+  const servingsPerPkg = (servingG && packageG) ? Math.max(1, Math.round(packageG / servingG)) : null;
+  const canShowWholePackage = !!servingsPerPkg;
+  const mult = (servingMode === 'package' && canShowWholePackage) ? servingsPerPkg : 1;
 
   // Format the value with serving multiplier.
   // When the OCR scan returned no data, render an em-dash instead of "0.00mg".
@@ -198,20 +221,21 @@ export default function ResultScreen() {
           </div>
         )}
 
-        {/* Serving toggle — hide when we don't have real nutrition data */}
-        {!lowConfidence && (
+        {/* Serving toggle — only show when we know servings-per-package.
+            Otherwise per-serving is the only honest view we can offer. */}
+        {!lowConfidence && canShowWholePackage && (
           <div className="serving-toggle">
             <button
               className={`serving-btn ${servingMode === 'serving' ? 'active' : ''}`}
               onClick={() => setServingMode('serving')}
             >
-              Per Serving ({servingG}g)
+              {servingG ? `Per Serving (${servingG}g)` : 'Per Serving'}
             </button>
             <button
               className={`serving-btn ${servingMode === 'package' ? 'active' : ''}`}
               onClick={() => setServingMode('package')}
             >
-              Whole Package
+              Whole Package ({servingsPerPkg}×)
             </button>
           </div>
         )}
@@ -219,7 +243,9 @@ export default function ResultScreen() {
         {/* Nutrition insights — 2x2. Skip entirely when OCR was partial. */}
         {!lowConfidence && (
         <div className="section-label" style={{ marginTop: 20 }}>
-          NUTRITION {servingMode === 'package' ? '(WHOLE PACKAGE)' : '(PER SERVING)'}
+          NUTRITION {(servingMode === 'package' && canShowWholePackage)
+            ? '(WHOLE PACKAGE)'
+            : (servingG ? `(PER SERVING — ${servingG}g)` : '(PER SERVING)')}
         </div>
         )}
         {!lowConfidence && (
