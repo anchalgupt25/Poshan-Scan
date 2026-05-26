@@ -23,16 +23,104 @@ function verdictBucket(flags = [], grade) {
   return { bucket: 'safe', icon: '✓', label: 'Scanned' };
 }
 
-// Split flags into "Good stuff" (green/positive) vs "Watch out" (orange/red)
-function splitFlags(flags = []) {
+// Build Good stuff + Watch out lists from BOTH the backend's explicit flags
+// AND the nutrient insights themselves.
+//
+// Rules (per user-defined logic):
+//   GOOD = any nutrient supplying ≥10% of daily need (calcium, iron, protein,
+//          fiber, etc.) OR any explicit non-severity flag
+//   WATCH = any nutrient with status 'warn' (over limit), any red/orange flag,
+//          any added sugar over caution threshold, any artificial dye/flavor hit
+function deriveFlagColumns({ flags = [], insights = [], product, score, ageBand }) {
   const good = [];
   const bad = [];
+
+  // Explicit backend flags
   for (const f of flags) {
     const sev = (f.severity || '').toLowerCase();
-    if (sev === 'red' || sev === 'orange') bad.push(f);
-    else good.push(f);
+    if (sev === 'red' || sev === 'orange') {
+      bad.push({ title: f.title, detail: f.detail });
+    } else if (sev === 'green') {
+      good.push({ title: f.title, detail: f.detail });
+    }
   }
-  return { good, bad };
+
+  // Derive from nutrient insights
+  for (const ins of insights) {
+    const name = (ins.name || '').toLowerCase();
+    const status = (ins.status || '').toLowerCase();
+    const pct = Number(ins.pct_of_daily) || 0;
+    const value = parseFloat(ins.value) || 0;
+
+    // "Watch out" — sodium / added sugar over limit; nutrients flagged warn
+    if (status === 'warn') {
+      const pretty = ins.name + (pct ? ` — ${Math.round(pct)}% of daily` : '');
+      bad.push({
+        title: `${pretty}`,
+        detail: name.includes('sodium')
+          ? 'Above AAP soft limit for this age — keep an eye on day-total.'
+          : name.includes('sugar')
+          ? 'AAP recommends zero added sugar under 2y; <25g/day for 2-5y.'
+          : 'Above the soft limit for this age band.',
+      });
+      continue;
+    }
+
+    // "Good stuff" — nutrient supplies ≥10% of daily for things parents look for
+    const isLookFor = ['protein', 'iron', 'calcium', 'fiber', 'zinc'].some((k) => name.includes(k));
+    if (isLookFor && (status === 'good' || pct >= 10) && value > 0) {
+      good.push({
+        title: `Good source of ${ins.name.toLowerCase()}`,
+        detail: pct ? `${Math.round(pct)}% of daily for this age` : 'Above the "look for" threshold',
+      });
+    }
+  }
+
+  // Ingredient-level red flags (from the product directly)
+  const ing = (product?.ingredients_text || '').toLowerCase();
+  const nf = product?.nutrition || {};
+  if (nf.artificial_dyes) {
+    bad.push({ title: 'Artificial dyes detected', detail: 'AAP 2018: linked to worsened ADHD symptoms in children.' });
+  }
+  if (nf.artificial_flavor) {
+    bad.push({ title: 'Artificial flavors', detail: 'Look for "natural flavor" or whole-food alternatives.' });
+  }
+  if (/partially hydrogenated/.test(ing)) {
+    bad.push({ title: 'Partially hydrogenated oil', detail: 'Source of trans fats. Avoid for children.' });
+  }
+  if (/high fructose corn syrup|hfcs/.test(ing)) {
+    bad.push({ title: 'High-fructose corn syrup', detail: 'Concentrated added sugar — limit for kids.' });
+  }
+  if (/\borganic\b/.test(ing) && !good.some((g) => /organic/i.test(g.title))) {
+    good.push({ title: 'Made with organic ingredients', detail: 'No synthetic pesticides or GMOs per USDA.' });
+  }
+  if (/\bwhole grain\b|\bwhole wheat\b|\bwhole oat/.test(ing) && !good.some((g) => /whole grain/i.test(g.title))) {
+    good.push({ title: 'Whole grains', detail: 'Better fiber + steadier energy than refined grains.' });
+  }
+  if (/\bno added sugar\b|\bunsweetened\b/.test(ing) && !good.some((g) => /sugar/i.test(g.title))) {
+    good.push({ title: 'No added sugar', detail: 'AAP-aligned for young children.' });
+  }
+
+  // Processing penalty
+  const nova = product?.nova_group;
+  if (nova === 4) {
+    bad.push({ title: 'Ultra-processed (NOVA 4)', detail: 'Multiple industrial additives — best as occasional treat.' });
+  } else if (nova === 1 || nova === 2) {
+    good.push({ title: nova === 1 ? 'Minimally processed' : 'Lightly processed', detail: 'Closer to whole-food form.' });
+  }
+
+  // De-dupe by title
+  const dedupe = (arr) => {
+    const seen = new Set();
+    return arr.filter((x) => {
+      const k = (x.title || '').toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+
+  return { good: dedupe(good).slice(0, 5), bad: dedupe(bad).slice(0, 5) };
 }
 
 export default function ResultScreen() {
@@ -77,7 +165,13 @@ export default function ResultScreen() {
     return [...picked, ...remaining];
   })();
 
-  const { good: goodFlags, bad: badFlags } = splitFlags(flags);
+  const { good: goodFlags, bad: badFlags } = deriveFlagColumns({
+    flags,
+    insights: rawInsights,
+    product,
+    score,
+    ageBand: activeKid?.age_band,
+  });
   const verdict = verdictBucket(flags, grade);
   const childName = activeKid?.name || 'your child';
 

@@ -7,23 +7,25 @@ import './home.css';
 
 const scanMethods = [
   {
-    id: 'barcode',
+    id: 'photo',
     primary: true,
     icon: '📷',
-    title: 'Scan a barcode',
-    desc: 'Fastest way — most products in seconds',
+    title: 'Photograph the label',
+    desc: 'Snap the back of the package — we read it instantly',
   },
   {
-    id: 'photo',
-    icon: '🏷️',
-    title: 'Photograph the label',
-    desc: 'For products without a clear barcode',
+    id: 'barcode',
+    icon: '🔢',
+    title: 'Enter barcode',
+    desc: 'Type the UPC manually — camera scan coming soon',
+    badge: 'BETA',
   },
   {
     id: 'link',
     icon: '🔗',
     title: 'Paste a product link',
-    desc: 'From Amazon, Walmart, Instacart, etc.',
+    desc: 'From Amazon, Walmart, Target, Instacart',
+    badge: 'BETA',
   },
 ];
 
@@ -168,7 +170,10 @@ export default function HomeScreen() {
             >
               <div className="scan-card-icon">{m.icon}</div>
               <div className="scan-card-info">
-                <div className="scan-card-title">{m.title}</div>
+                <div className="scan-card-title">
+                  {m.title}
+                  {m.badge && <span className="scan-card-badge">{m.badge}</span>}
+                </div>
                 <div className="scan-card-desc">{m.desc}</div>
               </div>
               <div className="scan-card-arrow">→</div>

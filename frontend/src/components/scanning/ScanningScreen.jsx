@@ -147,14 +147,19 @@ export default function ScanningScreen() {
         </div>
 
         <div className="scrollable" style={{ padding: '16px 24px 24px' }}>
-          <div className="scan-frame" style={{ margin: '8px auto 24px' }}>
-            <div className="scan-corners">
-              <div className="corner tl" /><div className="corner tr" />
-              <div className="corner bl" /><div className="corner br" />
+          <div className="scan-tip" style={{ marginBottom: 20 }}>
+            <div className="scan-tip-icon">🧪</div>
+            <div>
+              <strong>Camera barcode scanning is coming soon.</strong>
+              <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 4, lineHeight: 1.5 }}>
+                For now, type the UPC manually below — we'll look it up instantly across USDA + Open Food Facts.
+                For the most reliable scan today, use <strong>📷 Photograph the label</strong> from home.
+              </div>
             </div>
-            <div className="scan-line-anim" />
-            <div className="scan-hint">{method.desc}</div>
           </div>
+
+          {/* Removed the empty viewfinder — was a "white wall" that confused users.
+              Manual entry form below is now the primary affordance. */}
 
           <div className="section-label">ENTER BARCODE MANUALLY</div>
 
