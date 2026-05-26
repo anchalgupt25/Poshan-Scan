@@ -70,10 +70,10 @@ export default function ResultScreen() {
   const flags = score?.flags || [];
   const rawInsights = score?.nutrient_insights || [];
 
-  // Top-4 priority: parents care most about Sodium, Sugar, Iron, Calcium,
-  // Protein in roughly that order for child nutrition. Reorder the insight
-  // list so these always come first when present, then anything else after.
-  const PRIORITY_ORDER = ['sodium', 'iron', 'protein', 'calcium', 'sugar', 'fiber', 'fat'];
+  // Top-4 priority (per beta testing feedback): Protein, Iron, Sodium,
+  // Calcium claim the top 4 cards in that order when present. Sugar, Fiber,
+  // Zinc, Fat trail behind as supporting context.
+  const PRIORITY_ORDER = ['protein', 'iron', 'sodium', 'calcium', 'sugar', 'fiber', 'zinc', 'fat'];
   const insights = (() => {
     const remaining = [...rawInsights];
     const picked = [];

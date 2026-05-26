@@ -1,0 +1,3204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nouri Scan — Interactive Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #FBF6EE;
+  --cream-deep: #F4E9D7;
+  --terracotta: #D8694A;
+  --terracotta-deep: #B8533C;
+  --rust: #8B3A28;
+  --butter: #F4D89A;
+  --sage: #7FA372;
+  --sage-deep: #5F8456;
+  --coral: #E8704A;
+  --ink: #3A2E26;
+  --ink-soft: #6A5A4E;
+  --ink-muted: #9E8E7E;
+  --line: #E8DCC4;
+  --shadow-sm: 0 2px 6px rgba(58, 46, 38, 0.06);
+  --shadow-md: 0 8px 24px rgba(58, 46, 38, 0.10);
+  --shadow-lg: 0 20px 50px rgba(58, 46, 38, 0.15);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'DM Sans', -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--sans);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(216, 105, 74, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(127, 163, 114, 0.06) 0%, transparent 40%),
+    var(--cream);
+  min-height: 100vh;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+/* Subtle paper grain texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23  0 0 0 0 0.18  0 0 0 0 0.15  0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* === Phone frame === */
+.phone-shell {
+  position: relative;
+  width: 390px;
+  height: 800px;
+  background: var(--ink);
+  border-radius: 48px;
+  padding: 12px;
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 0 0 2px rgba(255,255,255,0.04);
+  z-index: 1;
+}
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background: var(--cream);
+  border-radius: 38px;
+  overflow: hidden;
+  position: relative;
+}
+.phone-notch {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 28px;
+  background: var(--ink);
+  border-radius: 16px;
+  z-index: 100;
+}
+
+@media (max-width: 460px) {
+  body { padding: 0; align-items: stretch; }
+  .phone-shell { width: 100vw; height: 100vh; border-radius: 0; padding: 0; }
+  .phone-screen { border-radius: 0; }
+  .phone-notch { display: none; }
+}
+
+/* === Screen system === */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.screen.active {
+  display: flex;
+  opacity: 1;
+  animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Status bar === */
+.status-bar {
+  height: 50px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  position: relative;
+  z-index: 10;
+}
+.status-bar .icons { display: flex; gap: 5px; align-items: center; }
+
+/* ============================ SPLASH ============================ */
+#screen-splash {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(244, 216, 154, 0.4) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+}
+.splash-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  animation: splashRise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes splashRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.logo-mark {
+  width: 110px;
+  height: 110px;
+  margin-bottom: 8px;
+  animation: logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.brand-name {
+  font-family: var(--serif);
+  font-size: 56px;
+  font-weight: 500;
+  font-variation-settings: "opsz" 144, "SOFT" 100;
+  color: var(--rust);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.brand-name em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terracotta);
+}
+.tagline {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--ink-soft);
+  max-width: 260px;
+  line-height: 1.5;
+}
+.splash-cta {
+  margin-top: 32px;
+  padding: 18px 48px;
+  background: var(--rust);
+  color: var(--cream);
+  border: none;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 20px rgba(139, 58, 40, 0.25);
+  transition: all 0.2s ease;
+}
+.splash-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(139, 58, 40, 0.32); }
+.splash-cta:active { transform: translateY(0); }
+
+.splash-footer {
+  position: absolute;
+  bottom: 32px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ============================ ONBOARDING ============================ */
+.onboarding-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 28px 28px;
+  overflow-y: auto;
+}
+.onboard-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+.onboard-progress span {
+  flex: 1;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+.onboard-progress span.done { background: var(--terracotta); }
+.onboard-progress span.active { background: var(--terracotta); }
+
+.onboard-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--terracotta);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.onboard-title {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+  font-variation-settings: "opsz" 100;
+  color: var(--ink);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 12px;
+}
+.onboard-title em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+.onboard-subtitle {
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin-bottom: 28px;
+}
+
+.input-group { margin-bottom: 20px; }
+.input-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.text-input, .age-input {
+  width: 100%;
+  padding: 16px 18px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--sans);
+  font-size: 16px;
+  background: var(--cream);
+  color: var(--ink);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.text-input:focus, .age-input:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 4px rgba(216, 105, 74, 0.12);
+}
+
+.age-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.age-pill {
+  padding: 14px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.age-pill:hover { border-color: var(--terracotta); }
+.age-pill.selected {
+  background: var(--terracotta);
+  color: var(--cream);
+  border-color: var(--terracotta);
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  padding: 10px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 100px;
+  background: var(--cream);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+}
+.chip:hover { border-color: var(--terracotta); }
+.chip.selected {
+  background: var(--terracotta);
+  color: var(--cream);
+  border-color: var(--terracotta);
+}
+.chip.selected::before { content: '✓'; font-size: 12px; }
+
+.chip-restriction.selected { background: var(--sage-deep); border-color: var(--sage-deep); }
+
+.custom-allergy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px 6px 12px;
+  background: var(--terracotta);
+  color: var(--cream);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.custom-allergy-tag button {
+  background: rgba(255,255,255,0.25);
+  border: none;
+  color: var(--cream);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0;
+  line-height: 1;
+}
+
+.dietary-info-banner {
+  background: rgba(127, 163, 114, 0.12);
+  border-left: 3px solid var(--sage);
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--sage-deep);
+  line-height: 1.5;
+}
+
+.onboard-cta-row {
+  margin-top: auto;
+  padding-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+.btn {
+  padding: 16px 24px;
+  border: none;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-primary {
+  background: var(--rust);
+  color: var(--cream);
+  flex: 1;
+  box-shadow: 0 4px 14px rgba(139, 58, 40, 0.2);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(139, 58, 40, 0.25); }
+.btn-primary:disabled { background: var(--line); color: var(--ink-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1.5px solid var(--line);
+}
+.btn-ghost:hover { border-color: var(--ink-soft); }
+.btn-text {
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 10px;
+}
+.btn-text:hover { color: var(--terracotta); }
+
+/* ============================ HOME ============================ */
+#screen-home {
+  background: var(--cream);
+}
+.home-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 100px;
+}
+.home-header {
+  padding: 8px 24px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.home-greeting-block { flex: 1; }
+.home-greeting-label {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.home-greeting-title {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.home-greeting-title em {
+  font-style: italic;
+  color: var(--terracotta);
+}
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--butter), var(--terracotta));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--rust);
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.scan-section-label {
+  padding: 0 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 18px 0 14px;
+}
+
+.scan-card-stack {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.scan-card {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.scan-card:hover {
+  border-color: var(--terracotta);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.scan-card.primary {
+  background: linear-gradient(135deg, var(--rust), var(--terracotta));
+  color: var(--cream);
+  border-color: var(--rust);
+  box-shadow: 0 8px 24px rgba(139, 58, 40, 0.22);
+}
+.scan-card.primary:hover { box-shadow: 0 12px 30px rgba(139, 58, 40, 0.30); }
+
+.scan-icon {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: rgba(216, 105, 74, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--terracotta);
+}
+.scan-card.primary .scan-icon { background: rgba(255, 255, 255, 0.2); color: var(--cream); }
+
+.scan-text { flex: 1; }
+.scan-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+.scan-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.4; }
+.scan-card.primary .scan-desc { color: rgba(255, 255, 255, 0.8); }
+
+.scan-arrow {
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.scan-card.primary .scan-arrow { color: rgba(255, 255, 255, 0.7); }
+
+.recent-section { margin-top: 8px; }
+.recent-header {
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+.recent-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.recent-link {
+  font-size: 12px;
+  color: var(--terracotta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recent-list {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recent-item {
+  background: rgba(244, 233, 215, 0.5);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.recent-item:hover { background: var(--cream-deep); }
+.recent-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.recent-thumb.safe { background: rgba(127, 163, 114, 0.18); color: var(--sage-deep); }
+.recent-thumb.flag { background: rgba(232, 112, 74, 0.18); color: var(--coral); }
+.recent-info { flex: 1; min-width: 0; }
+.recent-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-status { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+.recent-time { font-size: 11px; color: var(--ink-muted); flex-shrink: 0; }
+
+/* === Floating bot button === */
+/* Bot floating button replaced by sticky ask-bar */
+
+/* ============================ SCANNING ============================ */
+#screen-scanning {
+  background: var(--ink);
+  color: var(--cream);
+}
+.scan-viewport {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 40px 32px;
+}
+.scan-window {
+  width: 240px;
+  height: 240px;
+  border-radius: 24px;
+  position: relative;
+  border: 2px solid rgba(244, 246, 238, 0.2);
+  background:
+    linear-gradient(135deg, rgba(216, 105, 74, 0.1), rgba(127, 163, 114, 0.05));
+  overflow: hidden;
+}
+.scan-corners::before, .scan-corners::after,
+.scan-window::before, .scan-window::after {
+  content: '';
+  position: absolute;
+  width: 28px; height: 28px;
+  border: 3px solid var(--butter);
+}
+.scan-window::before { top: -2px; left: -2px; border-right: none; border-bottom: none; border-radius: 24px 0 0 0; }
+.scan-window::after { top: -2px; right: -2px; border-left: none; border-bottom: none; border-radius: 0 24px 0 0; }
+.scan-corners::before { bottom: -2px; left: -2px; border-right: none; border-top: none; border-radius: 0 0 0 24px; }
+.scan-corners::after { bottom: -2px; right: -2px; border-left: none; border-top: none; border-radius: 0 0 24px 0; }
+
+.scan-line {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 30px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--butter), transparent);
+  box-shadow: 0 0 16px var(--butter);
+  animation: scanLine 1.6s ease-in-out infinite;
+  border-radius: 2px;
+}
+@keyframes scanLine {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(180px); }
+  100% { transform: translateY(0); }
+}
+
+.scan-status-text {
+  margin-top: 36px;
+  text-align: center;
+}
+.scan-status-text h3 {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.scan-status-text p {
+  font-size: 13px;
+  color: rgba(244, 246, 238, 0.6);
+  margin-top: 8px;
+}
+
+.scan-demo-picker {
+  margin-top: 28px;
+  background: rgba(244, 246, 238, 0.06);
+  border: 1px dashed rgba(244, 246, 238, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  width: 100%;
+  max-width: 320px;
+}
+.scan-demo-picker p {
+  font-size: 11px;
+  color: rgba(244, 246, 238, 0.5);
+  text-align: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.demo-pick-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: rgba(244, 246, 238, 0.04);
+  border: 1px solid rgba(244, 246, 238, 0.1);
+  border-radius: 8px;
+  color: var(--cream);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: background 0.2s;
+}
+.demo-pick-btn:hover { background: rgba(244, 246, 238, 0.1); }
+.demo-pick-btn:last-child { margin-bottom: 0; }
+.demo-pick-btn .pill {
+  display: inline-block;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 100px;
+  margin-left: 6px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.demo-pick-btn .pill.safe { background: var(--sage); color: var(--ink); }
+.demo-pick-btn .pill.allergen { background: var(--coral); color: var(--cream); }
+.demo-pick-btn .pill.restriction { background: var(--butter); color: var(--ink); }
+
+.scan-cancel {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  background: rgba(244, 246, 238, 0.1);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--cream);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* ============================ RESULT (compact mobile layout) ============================ */
+#screen-result {
+  background: var(--cream);
+}
+.result-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 88px; /* extra room for sticky bot bar */
+}
+
+/* Compact top bar — back arrow + product identity in one strip */
+.result-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 8px;
+  background: var(--cream);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.result-top-bar.safe { border-bottom-color: rgba(127, 163, 114, 0.4); }
+.result-top-bar.flag { border-bottom-color: rgba(232, 112, 74, 0.4); }
+.result-top-bar.warn { border-bottom-color: rgba(244, 216, 154, 0.6); }
+
+.result-back-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.result-back-btn:hover { background: var(--cream-deep); }
+
+.result-product-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.result-product-thumb {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--butter);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.result-product-text { flex: 1; min-width: 0; }
+.result-product-brand {
+  font-size: 10px;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result-product-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Verdict band — slim, instant-read */
+.verdict-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 0;
+}
+.verdict-band.safe { background: linear-gradient(90deg, rgba(127, 163, 114, 0.18), rgba(127, 163, 114, 0.06)); }
+.verdict-band.flag { background: linear-gradient(90deg, rgba(232, 112, 74, 0.20), rgba(232, 112, 74, 0.06)); }
+.verdict-band.warn { background: linear-gradient(90deg, rgba(244, 216, 154, 0.55), rgba(244, 216, 154, 0.18)); }
+.verdict-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cream);
+  font-size: 18px;
+  font-weight: 700;
+}
+.verdict-band.safe .verdict-icon { background: var(--sage); }
+.verdict-band.flag .verdict-icon { background: var(--coral); }
+.verdict-band.warn .verdict-icon { background: var(--rust); }
+.verdict-text { flex: 1; min-width: 0; }
+.verdict-label {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.verdict-label em { font-style: italic; }
+.verdict-meta {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+
+/* Section labels — tighter */
+.r-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 14px 16px 8px;
+}
+
+/* Two-column flag grid — the heart of the redesign */
+.flag-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 16px;
+}
+.flag-col {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 10px 8px;
+  display: flex;
+  flex-direction: column;
+}
+.flag-col.green { border-color: rgba(127, 163, 114, 0.45); background: rgba(127, 163, 114, 0.06); }
+.flag-col.red   { border-color: rgba(232, 112, 74, 0.45); background: rgba(232, 112, 74, 0.06); }
+
+.flag-col-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.flag-col.green .flag-col-head { color: var(--sage-deep); }
+.flag-col.red   .flag-col-head { color: var(--rust); }
+.flag-col-head .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.flag-col.green .dot { background: var(--sage); }
+.flag-col.red .dot { background: var(--coral); }
+
+.flag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.flag-item {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.flag-item-icon {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.flag-item-text { flex: 1; }
+.flag-item-text b { font-weight: 600; }
+.flag-item-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+.flag-item-tag.diet { background: var(--rust); color: var(--cream); }
+.flag-item-tag.allergen { background: var(--coral); color: var(--cream); }
+.flag-item-tag.heavy { background: var(--ink); color: var(--cream); }
+
+.flag-empty {
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+/* Nutritional notes — tighter */
+.serving-context-banner {
+  margin: 0 16px 6px;
+  padding: 7px 10px;
+  background: rgba(244, 216, 154, 0.4);
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+.serving-context-banner svg { flex-shrink: 0; color: var(--terracotta); }
+
+.serving-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+.serving-toggle {
+  display: inline-flex;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 2px;
+  gap: 2px;
+}
+.serving-toggle button {
+  padding: 5px 11px;
+  background: transparent;
+  border: none;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.serving-toggle button.active {
+  background: var(--rust);
+  color: var(--cream);
+  box-shadow: 0 2px 6px rgba(139, 58, 40, 0.2);
+}
+.serving-info {
+  font-size: 10px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 16px;
+}
+.insight-card {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 11px;
+}
+.insight-card.alert { border-color: rgba(232, 112, 74, 0.4); background: rgba(232, 112, 74, 0.05); }
+.insight-card.good  { border-color: rgba(127, 163, 114, 0.4); background: rgba(127, 163, 114, 0.06); }
+.insight-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.insight-emoji { font-size: 16px; }
+.insight-mini-tag {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.insight-mini-tag.alert { background: var(--coral); color: var(--cream); }
+.insight-mini-tag.good { background: var(--sage); color: var(--cream); }
+.insight-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1px;
+}
+.insight-value {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.insight-context { font-size: 10px; color: var(--ink-soft); margin-top: 3px; line-height: 1.35; }
+
+/* Sources — collapsed details */
+.source-row {
+  margin: 12px 16px 0;
+  padding: 9px 12px;
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+.source-row strong { color: var(--ink-soft); font-weight: 600; }
+
+/* Alternatives — tightened */
+.alt-section { padding: 8px 16px 0; }
+.alt-card {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alt-thumb {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: var(--cream-deep);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.alt-info { flex: 1; min-width: 0; }
+.alt-name {
+  font-size: 12px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.alt-store { font-size: 10px; color: var(--ink-muted); margin-top: 1px; }
+.alt-tag {
+  font-size: 9px;
+  background: var(--sage);
+  color: var(--cream);
+  padding: 3px 7px;
+  border-radius: 100px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+/* ============================ STICKY ASK NOURI BAR ============================ */
+.ask-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 14px 14px;
+  background: linear-gradient(180deg, transparent 0%, var(--cream) 30%);
+  z-index: 20;
+  pointer-events: none;
+}
+.ask-bar-inner {
+  background: linear-gradient(135deg, var(--rust), var(--terracotta));
+  border-radius: 100px;
+  padding: 11px 16px 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 8px 22px rgba(139, 58, 40, 0.32);
+  transition: transform 0.2s ease;
+}
+.ask-bar-inner:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(139, 58, 40, 0.4); }
+.ask-bar-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--butter);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.ask-bar-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  background: var(--sage);
+  border: 2px solid var(--rust);
+  border-radius: 50%;
+}
+.ask-bar-text { flex: 1; min-width: 0; }
+.ask-bar-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--cream);
+  line-height: 1.1;
+}
+.ask-bar-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 1px;
+}
+.ask-bar-arrow { color: var(--cream); flex-shrink: 0; }
+
+/* On home, the ask-bar replaces the fab */
+
+/* ============================ BOT CHAT ============================ */
+#screen-bot {
+  background: var(--cream-deep);
+}
+.bot-header {
+  padding: 14px 18px 14px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.bot-back {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bot-header-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--butter), var(--terracotta));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bot-header-text { flex: 1; }
+.bot-header-name {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.bot-header-status {
+  font-size: 11px;
+  color: var(--sage-deep);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.bot-header-status::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--sage);
+  border-radius: 50%;
+}
+
+.bot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bot-msg {
+  display: flex;
+  gap: 8px;
+  max-width: 85%;
+  animation: msgIn 0.4s ease;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.bot-msg.from-bot { align-self: flex-start; }
+.bot-msg.from-user { align-self: flex-end; flex-direction: row-reverse; }
+
+.bot-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--butter), var(--terracotta));
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bot-msg-bubble {
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.bot-msg.from-bot .bot-msg-bubble {
+  background: var(--cream);
+  border-bottom-left-radius: 4px;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.bot-msg.from-user .bot-msg-bubble {
+  background: var(--rust);
+  color: var(--cream);
+  border-bottom-right-radius: 4px;
+}
+.bot-msg-bubble strong { color: var(--terracotta); font-weight: 600; }
+.bot-msg.from-user .bot-msg-bubble strong { color: var(--butter); }
+
+.bot-msg-source {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.bot-typing {
+  display: flex;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--cream);
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+  margin-left: 36px;
+}
+.bot-typing span {
+  width: 7px; height: 7px;
+  background: var(--ink-muted);
+  border-radius: 50%;
+  animation: typing 1.2s ease-in-out infinite;
+}
+.bot-typing span:nth-child(2) { animation-delay: 0.15s; }
+.bot-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.bot-suggestions {
+  padding: 4px 16px 8px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.bot-suggestions::-webkit-scrollbar { display: none; }
+.suggestion-chip {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--sans);
+  transition: all 0.2s;
+}
+.suggestion-chip:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+.bot-input-row {
+  padding: 12px 16px 14px;
+  display: flex;
+  gap: 8px;
+  background: var(--cream);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.bot-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+.bot-input:focus { outline: none; border-color: var(--terracotta); }
+.bot-send {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--rust);
+  border: none;
+  color: var(--cream);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ============================ DESKTOP HELPER ============================ */
+.helper-panel {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 280px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 900px) { .helper-panel { display: none; } }
+
+.helper-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--rust);
+  margin-bottom: 4px;
+}
+.helper-sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.helper-step {
+  font-size: 12px;
+  color: var(--ink);
+  padding: 6px 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.helper-step b {
+  background: var(--terracotta);
+  color: var(--cream);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 100px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.helper-reset {
+  margin-top: 14px;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.helper-reset:hover { background: var(--terracotta); color: var(--cream); border-color: var(--terracotta); }
+
+/* ============================ NUTRITION-WATCH CARDS (onboarding 1) ============================ */
+.watch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+.watch-card {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 12px;
+  position: relative;
+}
+.watch-card.warn { border-color: rgba(232, 112, 74, 0.35); background: rgba(232, 112, 74, 0.06); }
+.watch-card.good { border-color: rgba(127, 163, 114, 0.4); background: rgba(127, 163, 114, 0.08); }
+.watch-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.watch-card.warn .watch-tag { background: var(--coral); color: var(--cream); }
+.watch-card.good .watch-tag { background: var(--sage); color: var(--cream); }
+.watch-emoji { font-size: 22px; margin-bottom: 6px; }
+.watch-name {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+.watch-detail { font-size: 11px; color: var(--ink-soft); line-height: 1.4; }
+
+.watch-footnote {
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  text-align: center;
+  margin: 12px 0 4px;
+  font-style: italic;
+}
+
+/* ============================ KID SELECTOR ============================ */
+#screen-kid-selector {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 216, 154, 0.4) 0%, transparent 50%),
+    var(--cream);
+  padding: 0;
+}
+.selector-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 28px 28px;
+  overflow-y: auto;
+}
+.selector-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--terracotta);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.selector-title {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+  font-variation-settings: "opsz" 100;
+  color: var(--ink);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin-bottom: 10px;
+}
+.selector-title em { font-style: italic; color: var(--terracotta); }
+.selector-sub {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin-bottom: 28px;
+}
+
+.kid-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.kid-card {
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.kid-card:hover {
+  border-color: var(--terracotta);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.kid-card.active {
+  border-color: var(--terracotta);
+  background: linear-gradient(135deg, rgba(244, 216, 154, 0.3), rgba(216, 105, 74, 0.08));
+}
+.kid-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.kid-avatar.color-1 { background: linear-gradient(135deg, var(--butter), var(--terracotta)); color: var(--rust); }
+.kid-avatar.color-2 { background: linear-gradient(135deg, #C8E0B4, var(--sage-deep)); color: var(--cream); }
+.kid-avatar.color-3 { background: linear-gradient(135deg, #F4D89A, #C7826B); color: var(--rust); }
+.kid-card-info { flex: 1; min-width: 0; }
+.kid-card-name {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+.kid-card-meta { font-size: 12px; color: var(--ink-muted); }
+.kid-card-arrow {
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.add-kid-card {
+  background: transparent;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  font-family: var(--sans);
+}
+.add-kid-card:hover { border-color: var(--terracotta); background: rgba(216, 105, 74, 0.04); }
+.add-kid-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(216, 105, 74, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--terracotta);
+}
+.add-kid-text { flex: 1; text-align: left; }
+.add-kid-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.add-kid-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+.selector-tip {
+  margin-top: auto;
+  padding: 14px 16px;
+  background: rgba(127, 163, 114, 0.1);
+  border-left: 3px solid var(--sage);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--sage-deep);
+  line-height: 1.5;
+}
+
+/* ============================ PROFILE SCREEN ============================ */
+#screen-profile {
+  background: var(--cream);
+}
+.profile-header {
+  padding: 12px 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.profile-back {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-header-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.profile-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+}
+.profile-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 16px 0 12px;
+}
+.profile-section-label:first-of-type { margin-top: 0; }
+
+.kid-detail-card {
+  background: linear-gradient(135deg, rgba(244, 216, 154, 0.25), rgba(216, 105, 74, 0.04));
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.kid-detail-card.is-active::before {
+  content: 'Active';
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--sage);
+  color: var(--cream);
+  padding: 3px 8px;
+  border-radius: 100px;
+}
+.kid-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.kid-detail-name {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 1px;
+}
+.kid-detail-age { font-size: 12px; color: var(--ink-muted); }
+
+.kid-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kid-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+.kid-detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+.kid-detail-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.kid-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kid-detail-tag {
+  font-size: 11px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 4px 10px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.kid-detail-tag.empty { color: var(--ink-muted); font-style: italic; border-style: dashed; }
+
+.kid-action-row {
+  display: flex;
+  gap: 8px;
+}
+.kid-action-btn {
+  flex: 1;
+  padding: 10px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+.kid-action-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+.kid-action-btn.primary { background: var(--rust); color: var(--cream); border-color: var(--rust); }
+.kid-action-btn.primary:hover { background: var(--terracotta-deep); color: var(--cream); }
+
+.profile-add-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1.5px dashed var(--terracotta);
+  border-radius: var(--radius-md);
+  color: var(--terracotta);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.profile-add-btn:hover { background: rgba(216, 105, 74, 0.06); }
+
+/* Switch kid button on home */
+.switch-kid-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  margin-top: 4px;
+  font-family: var(--sans);
+  transition: all 0.2s;
+}
+.switch-kid-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* ============================ PER-SERVING TOGGLE ============================ */
+.serving-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 28px;
+  margin-bottom: 12px;
+}
+.serving-toggle {
+  display: inline-flex;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+}
+.serving-toggle button {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.serving-toggle button.active {
+  background: var(--rust);
+  color: var(--cream);
+  box-shadow: 0 2px 6px rgba(139, 58, 40, 0.2);
+}
+.serving-info {
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.serving-context-banner {
+  margin: 0 28px 8px;
+  padding: 9px 12px;
+  background: rgba(244, 216, 154, 0.4);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+.serving-context-banner svg { flex-shrink: 0; color: var(--terracotta); }
+
+/* hide scrollbars cleanly */
+.home-content::-webkit-scrollbar,
+.result-content::-webkit-scrollbar,
+.bot-messages::-webkit-scrollbar,
+.onboarding-content::-webkit-scrollbar,
+.profile-content::-webkit-scrollbar,
+.selector-content::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<!-- Helper panel for desktop only -->
+<div class="helper-panel">
+  <div class="helper-title">Nouri Scan Prototype</div>
+  <p class="helper-sub">Mobile-first redesign · 5-second result reads</p>
+  <div class="helper-step"><b>1</b><span>Splash → Get started</span></div>
+  <div class="helper-step"><b>2</b><span>Onboarding shows the 4 nutrients Nouri watches</span></div>
+  <div class="helper-step"><b>3</b><span>Profile setup — try adding "cashew, pistachio" in <i>Other allergens</i></span></div>
+  <div class="helper-step"><b>4</b><span>Pick a scan mode, then any demo product</span></div>
+  <div class="helper-step"><b>5</b><span>Results: verdict band → green/red flags side-by-side → 4 nutrient cards</span></div>
+  <div class="helper-step"><b>6</b><span>Toggle <i>Per serving</i> ↔ <i>Whole package</i></span></div>
+  <div class="helper-step"><b>7</b><span>Sticky <i>Ask Nouri</i> bar — always visible at the bottom</span></div>
+  <div class="helper-step"><b>8</b><span>Tap avatar → manage profiles, add a 2nd kid</span></div>
+  <button class="helper-reset" onclick="resetFlow()">↺ Restart prototype</button>
+</div>
+
+<div class="phone-shell">
+  <div class="phone-notch"></div>
+  <div class="phone-screen">
+
+    <!-- ============================ SPLASH ============================ -->
+    <div id="screen-splash" class="screen active">
+      <div class="splash-content">
+        <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Warm circular badge -->
+          <defs>
+            <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F4D89A"/>
+              <stop offset="100%" stop-color="#D8694A"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="46" fill="url(#badgeGrad)"/>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#8B3A28" stroke-width="2" stroke-opacity="0.15"/>
+          <!-- Sprout / leaf forming an N -->
+          <path d="M 32 68 Q 32 40 50 40 Q 68 40 68 68"
+                fill="none" stroke="#8B3A28" stroke-width="5" stroke-linecap="round"/>
+          <!-- Leaf -->
+          <path d="M 50 40 Q 56 30 66 32 Q 64 42 54 44 Z" fill="#5F8456"/>
+          <circle cx="50" cy="40" r="3" fill="#8B3A28"/>
+          <!-- Scan dot accent -->
+          <circle cx="32" cy="68" r="3.5" fill="#8B3A28"/>
+          <circle cx="68" cy="68" r="3.5" fill="#8B3A28"/>
+        </svg>
+        <h1 class="brand-name">N<em>ouri</em></h1>
+        <p class="tagline">A gentler way to know what's in your little one's snack.</p>
+        <button class="splash-cta" onclick="startFirstOnboarding()">Get started</button>
+      </div>
+      <div class="splash-footer">scan · understand · decide</div>
+    </div>
+
+    <!-- ============================ ONBOARDING 1 — INTRO ============================ -->
+    <div id="screen-onboard1" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="onboarding-content">
+        <div class="onboard-progress"><span class="active"></span><span></span><span></span><span></span></div>
+        <p class="onboard-step-label">Step 1 of 4 · How Nouri works</p>
+        <h2 class="onboard-title">Here's what Nouri <em>watches for</em> in every snack.</h2>
+        <p class="onboard-subtitle">Backed by AAP and FDA guidance — these four are the difference-makers for little ones. We surface them in plain English so you don't have to decode labels.</p>
+
+        <div class="watch-grid">
+          <div class="watch-card warn">
+            <span class="watch-tag">Watch out</span>
+            <div class="watch-emoji">🍯</div>
+            <div class="watch-name">Added sugar</div>
+            <div class="watch-detail">AAP says zero before age 2. We'll always flag it.</div>
+          </div>
+          <div class="watch-card warn">
+            <span class="watch-tag">Watch out</span>
+            <div class="watch-emoji">🧂</div>
+            <div class="watch-name">Sodium</div>
+            <div class="watch-detail">3 in 4 toddlers exceed daily limits. We'll show how much.</div>
+          </div>
+          <div class="watch-card good">
+            <span class="watch-tag">Look for</span>
+            <div class="watch-emoji">🦴</div>
+            <div class="watch-name">Iron</div>
+            <div class="watch-detail">Critical for brain development — often missed in toddler diets.</div>
+          </div>
+          <div class="watch-card warn">
+            <span class="watch-tag">Watch out</span>
+            <div class="watch-emoji">⚗️</div>
+            <div class="watch-name">Heavy metals</div>
+            <div class="watch-detail">We surface brand testing data and California AB 899 results.</div>
+          </div>
+        </div>
+
+        <p class="watch-footnote">Plus your child's allergies and your family's eating style — you'll set those next.</p>
+
+        <div class="onboard-cta-row">
+          <button class="btn btn-primary" onclick="goTo('onboard2')">Continue
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ ONBOARDING 2 — CHILD ============================ -->
+    <div id="screen-onboard2" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="onboarding-content">
+        <div class="onboard-progress"><span class="done"></span><span class="active"></span><span></span><span></span></div>
+        <p class="onboard-step-label">Step 2 of 4 · About your little one</p>
+        <h2 class="onboard-title">Tell us a bit about your <em>tiny human</em>.</h2>
+        <p class="onboard-subtitle">This stays on your device. We never sell your child's data. Period.</p>
+
+        <div class="input-group">
+          <label class="input-label">Their first name (or nickname)</label>
+          <input type="text" id="child-name" class="text-input" placeholder="e.g. Krish, Amy, Rhea…" oninput="checkOnboard2()">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">How old are they?</label>
+          <div class="age-buttons" id="age-buttons">
+            <button class="age-pill" data-age="0-6mo">0–6 mo</button>
+            <button class="age-pill" data-age="6-12mo">6–12 mo</button>
+            <button class="age-pill" data-age="12-18mo">12–18 mo</button>
+            <button class="age-pill" data-age="18-24mo">18–24 mo</button>
+            <button class="age-pill" data-age="2-3y">2–3 yrs</button>
+            <button class="age-pill" data-age="3-5y">3–5 yrs</button>
+          </div>
+        </div>
+
+        <div class="onboard-cta-row">
+          <button class="btn btn-ghost" onclick="onboard2Back()">Back</button>
+          <button class="btn btn-primary" id="onboard2-next" onclick="goTo('onboard3')" disabled>Continue
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ ONBOARDING 3 — ALLERGIES ============================ -->
+    <div id="screen-onboard3" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="onboarding-content">
+        <div class="onboard-progress"><span class="done"></span><span class="done"></span><span class="active"></span><span></span></div>
+        <p class="onboard-step-label">Step 3 of 4 · Allergens to watch for</p>
+        <h2 class="onboard-title">Anything we should <em>flag with care</em>?</h2>
+        <p class="onboard-subtitle">Tap any allergens we should always alert on. Includes hidden names and "may contain" warnings.</p>
+
+        <div class="chip-group" id="allergy-chips">
+          <button class="chip" data-allergy="peanut">🥜 Peanut</button>
+          <button class="chip" data-allergy="treenut">🌰 Tree nuts</button>
+          <button class="chip" data-allergy="sesame">🌱 Sesame</button>
+          <button class="chip" data-allergy="dairy">🥛 Dairy</button>
+          <button class="chip" data-allergy="egg">🥚 Egg</button>
+          <button class="chip" data-allergy="soy">🫘 Soy</button>
+          <button class="chip" data-allergy="wheat">🌾 Wheat / gluten</button>
+          <button class="chip" data-allergy="shellfish">🦐 Shellfish</button>
+          <button class="chip" data-allergy="fish">🐟 Fish</button>
+        </div>
+
+        <label class="input-label" style="margin-top: 22px;">Other allergens or ingredients to flag</label>
+        <p style="font-size: 12px; color: var(--ink-muted); margin-bottom: 10px;">e.g. cashew, pistachio, kiwi, mustard — anything specific to your child. Separate with commas.</p>
+        <input type="text" class="text-input" id="custom-allergy-input" placeholder="cashew, pistachio, kiwi…" oninput="updateCustomAllergies()">
+        <div id="custom-allergy-tags" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;"></div>
+
+        <p style="font-size: 12px; color: var(--ink-muted); margin-top: 16px;">No allergies right now? Just continue — you can add them anytime.</p>
+
+        <div class="onboard-cta-row">
+          <button class="btn btn-ghost" onclick="goTo('onboard2')">Back</button>
+          <button class="btn btn-primary" onclick="goTo('onboard4')">Continue
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ ONBOARDING 4 — DIET & GOALS ============================ -->
+    <div id="screen-onboard4" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="onboarding-content">
+        <div class="onboard-progress"><span class="done"></span><span class="done"></span><span class="done"></span><span class="active"></span></div>
+        <p class="onboard-step-label">Step 4 of 4 · Your family's plate</p>
+        <h2 class="onboard-title">How does your <em>family</em> eat?</h2>
+        <p class="onboard-subtitle">Pick any that apply. We'll spot ingredients that don't fit — including the sneaky ones like rennet, gelatin, and carmine.</p>
+
+        <div class="dietary-info-banner">
+          ✨ Most apps stop at "vegetarian." We go further — including Jain, halal, kosher, and strict-vegan rules that most labels don't surface.
+        </div>
+
+        <div class="chip-group" id="diet-chips">
+          <button class="chip chip-restriction" data-diet="vegetarian">Vegetarian</button>
+          <button class="chip chip-restriction" data-diet="vegan">Strict vegan</button>
+          <button class="chip chip-restriction" data-diet="jain">Jain</button>
+          <button class="chip chip-restriction" data-diet="halal">Halal</button>
+          <button class="chip chip-restriction" data-diet="kosher">Kosher</button>
+          <button class="chip chip-restriction" data-diet="no-pork">No pork</button>
+          <button class="chip chip-restriction" data-diet="no-honey">No honey</button>
+          <button class="chip chip-restriction" data-diet="no-added-sugar">Low added sugar</button>
+        </div>
+
+        <label class="input-label" style="margin-top: 22px;">Anything else you'd like Nouri to keep an eye on?</label>
+        <p style="font-size: 12px; color: var(--ink-muted); margin-bottom: 10px;">Optional — type whatever matters to you.</p>
+        <input type="text" class="text-input" placeholder="e.g. iron-rich snacks, low sodium…">
+
+        <div class="onboard-cta-row">
+          <button class="btn btn-ghost" onclick="goTo('onboard3')">Back</button>
+          <button class="btn btn-primary" onclick="finishOnboarding()">All set
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ HOME ============================ -->
+    <div id="screen-home" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="home-content">
+        <div class="home-header">
+          <div class="home-greeting-block">
+            <p class="home-greeting-label" id="greeting-time">Good morning</p>
+            <h1 class="home-greeting-title">What are we checking for <em id="greeting-name">your little one</em>?</h1>
+            <button class="switch-kid-btn" id="switch-kid-btn" onclick="openKidSelector()" style="display: none;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Switch kiddo
+            </button>
+          </div>
+          <div class="profile-avatar" id="profile-avatar" onclick="openProfile()" role="button" aria-label="Open profile">A</div>
+        </div>
+
+        <p class="scan-section-label">Quick check</p>
+        <div class="scan-card-stack">
+          <div class="scan-card primary" onclick="startScan('barcode')">
+            <div class="scan-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="2" height="12"/><rect x="6" y="6" width="1" height="12"/><rect x="9" y="6" width="3" height="12"/><rect x="14" y="6" width="1" height="12"/><rect x="17" y="6" width="2" height="12"/><rect x="21" y="6" width="1" height="12"/></svg>
+            </div>
+            <div class="scan-text">
+              <p class="scan-title">Scan a barcode</p>
+              <p class="scan-desc">Fastest way — most products in seconds</p>
+            </div>
+            <svg class="scan-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+
+          <div class="scan-card" onclick="startScan('photo')">
+            <div class="scan-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div class="scan-text">
+              <p class="scan-title">Photograph the label</p>
+              <p class="scan-desc">For products without a clear barcode</p>
+            </div>
+            <svg class="scan-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+
+          <div class="scan-card" onclick="startScan('link')">
+            <div class="scan-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div class="scan-text">
+              <p class="scan-title">Paste a product link</p>
+              <p class="scan-desc">From Amazon, Walmart, Instacart, etc.</p>
+            </div>
+            <svg class="scan-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="recent-section">
+          <div class="recent-header">
+            <p class="recent-title">Recent scans</p>
+            <span class="recent-link">See all</span>
+          </div>
+          <div class="recent-list" id="recent-list">
+            <div class="recent-item" onclick="showResult('safe')">
+              <div class="recent-thumb safe">🥣</div>
+              <div class="recent-info">
+                <div class="recent-name">Happy Baby — Sweet Potato Puffs</div>
+                <div class="recent-status">All clear · 4 nutrients to know</div>
+              </div>
+              <span class="recent-time">2h</span>
+            </div>
+            <div class="recent-item" onclick="showResult('allergen')">
+              <div class="recent-thumb flag">🥨</div>
+              <div class="recent-info">
+                <div class="recent-name">Annie's Cheddar Bunnies</div>
+                <div class="recent-status">Contains dairy · alert on</div>
+              </div>
+              <span class="recent-time">Yesterday</span>
+            </div>
+            <div class="recent-item" onclick="showResult('sugary')">
+              <div class="recent-thumb safe">🍌</div>
+              <div class="recent-info">
+                <div class="recent-name">Plum Organics — Banana Pouch</div>
+                <div class="recent-status">All clear · high added sugar</div>
+              </div>
+              <span class="recent-time">2d</span>
+            </div>
+            <div class="recent-item" onclick="showResult('biscuit')">
+              <div class="recent-thumb safe">🍪</div>
+              <div class="recent-info">
+                <div class="recent-name">Earth's Best Teething Biscuit</div>
+                <div class="recent-status">All clear</div>
+              </div>
+              <span class="recent-time">3d</span>
+            </div>
+            <div class="recent-item" onclick="showResult('restriction')">
+              <div class="recent-thumb flag">🧀</div>
+              <div class="recent-info">
+                <div class="recent-name">String cheese — Sargento</div>
+                <div class="recent-status">Contains animal rennet</div>
+              </div>
+              <span class="recent-time">3d</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ask-bar">
+        <div class="ask-bar-inner" onclick="openBot()">
+          <div class="ask-bar-avatar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B3A28" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r="0.5" fill="#8B3A28"/><circle cx="15" cy="11" r="0.5" fill="#8B3A28"/></svg>
+          </div>
+          <div class="ask-bar-text">
+            <div class="ask-bar-title">Ask Nouri</div>
+            <div class="ask-bar-sub">Anything about food &amp; your kiddo</div>
+          </div>
+          <svg class="ask-bar-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ SCANNING ============================ -->
+    <div id="screen-scanning" class="screen">
+      <button class="scan-cancel" onclick="goTo('home')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <div class="scan-viewport">
+        <div class="scan-window">
+          <div class="scan-corners"></div>
+          <div class="scan-line"></div>
+        </div>
+
+        <div class="scan-status-text">
+          <h3 id="scan-mode-title">Hold steady…</h3>
+          <p id="scan-mode-sub">Aim at the barcode on the back of the package</p>
+        </div>
+
+        <div class="scan-demo-picker">
+          <p>Demo · pick a product to see results</p>
+          <button class="demo-pick-btn" onclick="showResult('safe')">
+            🥣 Happy Baby — Sweet Potato Puffs <span class="pill safe">All clear</span>
+          </button>
+          <button class="demo-pick-btn" onclick="showResult('allergen')">
+            🥨 Annie's Cheddar Bunnies <span class="pill allergen">Allergen</span>
+          </button>
+          <button class="demo-pick-btn" onclick="showResult('restriction')">
+            🧀 Sargento String Cheese <span class="pill restriction">Diet conflict</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ RESULT (compact mobile) ============================ -->
+    <div id="screen-result" class="screen">
+      <div class="result-content">
+        <!-- Top bar: back + product identity in one strip -->
+        <div class="result-top-bar" id="result-top-bar">
+          <button class="result-back-btn" onclick="goTo('home')" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="result-product-id">
+            <div class="result-product-thumb" id="result-thumb"></div>
+            <div class="result-product-text">
+              <div class="result-product-brand" id="result-brand"></div>
+              <div class="result-product-name" id="result-name"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verdict band: instant 5-second read -->
+        <div class="verdict-band" id="verdict-band">
+          <div class="verdict-icon" id="verdict-icon"></div>
+          <div class="verdict-text">
+            <div class="verdict-label" id="verdict-label"></div>
+            <div class="verdict-meta" id="verdict-meta"></div>
+          </div>
+        </div>
+
+        <!-- Two-column flag grid: green left, red right -->
+        <p class="r-section-label">At a glance · for <span id="result-child-name" style="color: var(--terracotta);"></span></p>
+        <div class="flag-cols">
+          <div class="flag-col green">
+            <div class="flag-col-head"><span class="dot"></span>Good stuff</div>
+            <div class="flag-list" id="flag-list-green"></div>
+          </div>
+          <div class="flag-col red">
+            <div class="flag-col-head"><span class="dot"></span>Watch out</div>
+            <div class="flag-list" id="flag-list-red"></div>
+          </div>
+        </div>
+
+        <!-- Nutritional notes -->
+        <p class="r-section-label">Nutrition notes</p>
+        <div class="serving-context-banner">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="serving-info-text">Serving: 1 pouch · 4 per package</span>
+        </div>
+        <div class="serving-toggle-row">
+          <div class="serving-toggle">
+            <button class="active" id="toggle-serving" onclick="toggleServing('serving')">Per serving</button>
+            <button id="toggle-package" onclick="toggleServing('package')">Whole package</button>
+          </div>
+          <span class="serving-info" id="serving-multiplier-info"></span>
+        </div>
+        <div class="insight-grid" id="insight-grid"></div>
+
+        <!-- Alternatives -->
+        <div class="alt-section" id="alt-section" style="display: none;">
+          <p class="r-section-label">Better pick at your store</p>
+          <div class="alt-card" id="alt-card"></div>
+        </div>
+
+        <!-- Sources -->
+        <div class="source-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span><strong>Sources:</strong> AAP Nutrition Handbook · FDA FALCPA · HBBF testing data</span>
+        </div>
+
+        <div style="height: 24px;"></div>
+      </div>
+
+      <!-- Sticky Ask Nouri bar -->
+      <div class="ask-bar">
+        <div class="ask-bar-inner" onclick="openBot()">
+          <div class="ask-bar-avatar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B3A28" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r="0.5" fill="#8B3A28"/><circle cx="15" cy="11" r="0.5" fill="#8B3A28"/></svg>
+          </div>
+          <div class="ask-bar-text">
+            <div class="ask-bar-title">Ask Nouri about this</div>
+            <div class="ask-bar-sub" id="ask-bar-context">Why is this flagged? What can I give instead?</div>
+          </div>
+          <svg class="ask-bar-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ KID SELECTOR ============================ -->
+    <div id="screen-kid-selector" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="selector-content">
+        <p class="selector-eyebrow">Welcome back</p>
+        <h2 class="selector-title">Who are we <em>checking for</em> today?</h2>
+        <p class="selector-sub">A quick tap helps us flag the right allergens, ages, and dietary preferences for the right kiddo.</p>
+
+        <div class="kid-card-list" id="selector-kid-list"></div>
+
+        <button class="add-kid-card" onclick="startAddKid()">
+          <div class="add-kid-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="add-kid-text">
+            <div class="add-kid-title">Add another little one</div>
+            <div class="add-kid-sub">Each kid gets their own profile</div>
+          </div>
+        </button>
+
+        <div class="selector-tip">
+          💡 <strong>Why we ask:</strong> Allergens and dietary needs vary kid-to-kid. Tapping the right name keeps every scan accurate.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ PROFILE ============================ -->
+    <div id="screen-profile" class="screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="5" y="3" width="3" height="9" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5 Q 8 -1 15 5"/><path d="M3.5 7 Q 8 3 12.5 7"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2"/><rect x="2" y="2" width="17" height="8" rx="1" fill="currentColor"/><rect x="21" y="3.5" width="2" height="5" rx="1" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="profile-header">
+        <button class="profile-back" onclick="exitProfile()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <h1 class="profile-header-title">Family</h1>
+      </div>
+      <div class="profile-content">
+        <p class="profile-section-label">Your kiddos</p>
+        <div id="profile-kid-cards"></div>
+        <button class="profile-add-btn" onclick="startAddKid()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add another little one
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================ BOT CHAT ============================ -->
+    <div id="screen-bot" class="screen">
+      <div class="bot-header">
+        <button class="bot-back" onclick="closeBot()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div class="bot-header-avatar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B3A28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r="1" fill="#8B3A28"/><circle cx="15" cy="11" r="1" fill="#8B3A28"/></svg>
+        </div>
+        <div class="bot-header-text">
+          <p class="bot-header-name">Nouri</p>
+          <p class="bot-header-status">here, no judgment</p>
+        </div>
+      </div>
+
+      <div class="bot-messages" id="bot-messages"></div>
+
+      <div class="bot-suggestions" id="bot-suggestions">
+        <button class="suggestion-chip" onclick="askNouri('Why was this product flagged?')">Why was this flagged?</button>
+        <button class="suggestion-chip" onclick="askNouri('How much sugar is too much for a toddler?')">Sugar limits for toddlers?</button>
+        <button class="suggestion-chip" onclick="askNouri('Is my child getting enough iron?')">Enough iron?</button>
+        <button class="suggestion-chip" onclick="askNouri('What are good Walmart-brand alternatives?')">Walmart alternatives?</button>
+      </div>
+
+      <div class="bot-input-row">
+        <input type="text" class="bot-input" id="bot-input" placeholder="Ask Nouri anything…" onkeydown="if(event.key==='Enter') sendMessage()">
+        <button class="bot-send" onclick="sendMessage()" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// =========================== STATE ===========================
+const state = {
+  kids: [],                   // [{ id, name, age, allergies:Set, diets:Set, initial, colorClass }]
+  activeKidId: null,
+  hasOnboarded: false,
+  onboardingMode: 'first',    // 'first' | 'add' | 'edit' | 'idle'
+  editingKidId: null,
+  // Temp form state during onboarding
+  tempName: '',
+  tempAge: '',
+  tempAllergies: new Set(),
+  tempDiets: new Set(),
+  tempCustomAllergies: [],     // free-text allergens like 'cashew', 'pistachio'
+  // Result screen
+  servingMode: 'serving',     // 'serving' | 'package'
+  currentResultKey: null,
+  previousScreen: 'home'
+};
+
+// =========================== HELPERS ===========================
+function getActiveKid() {
+  return state.kids.find(k => k.id === state.activeKidId) || null;
+}
+function getActiveKidName() {
+  const k = getActiveKid();
+  return k ? k.name : 'your little one';
+}
+function formatAge(age) {
+  const map = {
+    '0-6mo': '0–6 months', '6-12mo': '6–12 months', '12-18mo': '12–18 months',
+    '18-24mo': '18–24 months', '2-3y': '2–3 years', '3-5y': '3–5 years'
+  };
+  return map[age] || age;
+}
+function formatAllergy(a) {
+  const map = {
+    peanut: 'Peanut', treenut: 'Tree nuts', sesame: 'Sesame', dairy: 'Dairy',
+    egg: 'Egg', soy: 'Soy', wheat: 'Wheat / gluten', shellfish: 'Shellfish', fish: 'Fish'
+  };
+  return map[a] || a;
+}
+function formatDiet(d) {
+  const map = {
+    vegetarian: 'Vegetarian', vegan: 'Strict vegan', jain: 'Jain', halal: 'Halal',
+    kosher: 'Kosher', 'no-pork': 'No pork', 'no-honey': 'No honey', 'no-added-sugar': 'Low added sugar'
+  };
+  return map[d] || d;
+}
+
+// =========================== NAVIGATION ===========================
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + screenId);
+  if (target) target.classList.add('active');
+  if (screenId === 'home') updateGreeting();
+  if (screenId === 'kid-selector') renderKidSelector();
+  if (screenId === 'profile') renderProfile();
+}
+
+function resetFlow() {
+  state.kids = [];
+  state.activeKidId = null;
+  state.hasOnboarded = false;
+  state.onboardingMode = 'first';
+  state.editingKidId = null;
+  resetOnboardingForm();
+  goTo('splash');
+}
+
+// =========================== ONBOARDING ===========================
+function startFirstOnboarding() {
+  state.onboardingMode = 'first';
+  state.editingKidId = null;
+  resetOnboardingForm();
+  goTo('onboard1');
+}
+
+function startAddKid() {
+  state.onboardingMode = 'add';
+  state.editingKidId = null;
+  resetOnboardingForm();
+  goTo('onboard2');
+}
+
+function startEditKid(kidId) {
+  state.onboardingMode = 'edit';
+  state.editingKidId = kidId;
+  resetOnboardingForm();
+  const kid = state.kids.find(k => k.id === kidId);
+  if (kid) prefillOnboardingForm(kid);
+  goTo('onboard2');
+}
+
+function onboard2Back() {
+  if (state.onboardingMode === 'first') goTo('onboard1');
+  else goTo('profile');
+}
+
+function checkOnboard2() {
+  const name = document.getElementById('child-name').value.trim();
+  const ageSelected = document.querySelector('.age-pill.selected');
+  document.getElementById('onboard2-next').disabled = !(name && ageSelected);
+  state.tempName = name;
+}
+
+function resetOnboardingForm() {
+  const nameInput = document.getElementById('child-name');
+  if (nameInput) nameInput.value = '';
+  const customInput = document.getElementById('custom-allergy-input');
+  if (customInput) customInput.value = '';
+  document.querySelectorAll('.age-pill, #allergy-chips .chip, #diet-chips .chip').forEach(c => c.classList.remove('selected'));
+  state.tempName = '';
+  state.tempAge = '';
+  state.tempAllergies = new Set();
+  state.tempDiets = new Set();
+  state.tempCustomAllergies = [];
+  renderCustomAllergyTags();
+  const nextBtn = document.getElementById('onboard2-next');
+  if (nextBtn) nextBtn.disabled = true;
+}
+
+function prefillOnboardingForm(kid) {
+  document.getElementById('child-name').value = kid.name;
+  state.tempName = kid.name;
+  state.tempAge = kid.age;
+  const agePill = document.querySelector(`.age-pill[data-age="${kid.age}"]`);
+  if (agePill) agePill.classList.add('selected');
+  kid.allergies.forEach(a => {
+    state.tempAllergies.add(a);
+    const chip = document.querySelector(`#allergy-chips .chip[data-allergy="${a}"]`);
+    if (chip) chip.classList.add('selected');
+  });
+  kid.diets.forEach(d => {
+    state.tempDiets.add(d);
+    const chip = document.querySelector(`#diet-chips .chip[data-diet="${d}"]`);
+    if (chip) chip.classList.add('selected');
+  });
+  // Custom allergies
+  state.tempCustomAllergies = (kid.customAllergies || []).slice();
+  const customInput = document.getElementById('custom-allergy-input');
+  if (customInput) customInput.value = state.tempCustomAllergies.join(', ');
+  renderCustomAllergyTags();
+  document.getElementById('onboard2-next').disabled = false;
+}
+
+function updateCustomAllergies() {
+  const input = document.getElementById('custom-allergy-input');
+  if (!input) return;
+  const raw = input.value;
+  // Split on commas, trim, dedupe, drop empties
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  state.tempCustomAllergies = Array.from(new Set(parts.map(p => p.toLowerCase())));
+  renderCustomAllergyTags();
+}
+
+function renderCustomAllergyTags() {
+  const container = document.getElementById('custom-allergy-tags');
+  if (!container) return;
+  container.innerHTML = '';
+  state.tempCustomAllergies.forEach((tag, idx) => {
+    const display = tag.charAt(0).toUpperCase() + tag.slice(1);
+    container.insertAdjacentHTML('beforeend', `
+      <span class="custom-allergy-tag">${display}<button type="button" onclick="removeCustomAllergy(${idx})" aria-label="Remove">×</button></span>
+    `);
+  });
+}
+
+function removeCustomAllergy(idx) {
+  state.tempCustomAllergies.splice(idx, 1);
+  document.getElementById('custom-allergy-input').value = state.tempCustomAllergies.join(', ');
+  renderCustomAllergyTags();
+}
+
+document.querySelectorAll('#age-buttons .age-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#age-buttons .age-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.tempAge = btn.dataset.age;
+    checkOnboard2();
+  });
+});
+
+document.querySelectorAll('#allergy-chips .chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('selected');
+    const a = btn.dataset.allergy;
+    if (state.tempAllergies.has(a)) state.tempAllergies.delete(a);
+    else state.tempAllergies.add(a);
+  });
+});
+
+document.querySelectorAll('#diet-chips .chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('selected');
+    const d = btn.dataset.diet;
+    if (state.tempDiets.has(d)) state.tempDiets.delete(d);
+    else state.tempDiets.add(d);
+  });
+});
+
+function finishOnboarding() {
+  if (state.onboardingMode === 'edit' && state.editingKidId) {
+    const kid = state.kids.find(k => k.id === state.editingKidId);
+    if (kid) {
+      kid.name = state.tempName;
+      kid.age = state.tempAge;
+      kid.allergies = new Set(state.tempAllergies);
+      kid.diets = new Set(state.tempDiets);
+      kid.customAllergies = state.tempCustomAllergies.slice();
+      kid.initial = (kid.name.charAt(0) || '?').toUpperCase();
+    }
+    state.onboardingMode = 'idle';
+    state.editingKidId = null;
+    updateActiveKidUI();
+    goTo('profile');
+  } else {
+    // Adding (first kid or additional kid)
+    const newKid = {
+      id: 'kid-' + Date.now(),
+      name: state.tempName,
+      age: state.tempAge,
+      allergies: new Set(state.tempAllergies),
+      diets: new Set(state.tempDiets),
+      customAllergies: state.tempCustomAllergies.slice(),
+      initial: (state.tempName.charAt(0) || 'A').toUpperCase(),
+      colorClass: 'color-' + ((state.kids.length % 3) + 1)
+    };
+    state.kids.push(newKid);
+
+    if (state.kids.length === 1) {
+      // First kid — set as active and go home
+      state.activeKidId = newKid.id;
+      state.hasOnboarded = true;
+      updateActiveKidUI();
+      state.onboardingMode = 'idle';
+      goTo('home');
+    } else {
+      // Additional kid added — show selector so parent confirms who they're checking for now
+      state.onboardingMode = 'idle';
+      goTo('kid-selector');
+    }
+  }
+}
+
+function updateActiveKidUI() {
+  const kid = getActiveKid();
+  const av = document.getElementById('profile-avatar');
+  const switchBtn = document.getElementById('switch-kid-btn');
+  if (kid && av) av.textContent = kid.initial;
+  if (switchBtn) switchBtn.style.display = state.kids.length > 1 ? 'inline-flex' : 'none';
+}
+
+function updateGreeting() {
+  const h = new Date().getHours();
+  let greet = 'Good morning';
+  if (h >= 12 && h < 17) greet = 'Good afternoon';
+  else if (h >= 17) greet = 'Good evening';
+  document.getElementById('greeting-time').textContent = greet;
+  document.getElementById('greeting-name').textContent = getActiveKidName();
+  updateActiveKidUI();
+}
+
+// =========================== PROFILE SCREEN ===========================
+function openProfile() {
+  state.previousScreen = document.querySelector('.screen.active').id.replace('screen-', '');
+  goTo('profile');
+}
+
+function exitProfile() {
+  goTo('home');
+}
+
+function renderProfile() {
+  const container = document.getElementById('profile-kid-cards');
+  if (!container) return;
+  container.innerHTML = '';
+  state.kids.forEach(kid => {
+    const ageLabel = formatAge(kid.age);
+    const isActive = kid.id === state.activeKidId;
+    const stdTags = Array.from(kid.allergies).map(a => `<span class="kid-detail-tag">${formatAllergy(a)}</span>`);
+    const customTags = (kid.customAllergies || []).map(c =>
+      `<span class="kid-detail-tag">${c.charAt(0).toUpperCase() + c.slice(1)}</span>`);
+    const allergyTags = (stdTags.length + customTags.length) > 0 ?
+      stdTags.concat(customTags).join('') :
+      '<span class="kid-detail-tag empty">No allergies set</span>';
+    const dietTags = kid.diets.size > 0 ?
+      Array.from(kid.diets).map(d => `<span class="kid-detail-tag">${formatDiet(d)}</span>`).join('') :
+      '<span class="kid-detail-tag empty">No restrictions</span>';
+    container.insertAdjacentHTML('beforeend', `
+      <div class="kid-detail-card ${isActive ? 'is-active' : ''}">
+        <div class="kid-detail-head">
+          <div class="kid-avatar ${kid.colorClass || 'color-1'}">${kid.initial}</div>
+          <div>
+            <div class="kid-detail-name">${kid.name}</div>
+            <div class="kid-detail-age">${ageLabel}</div>
+          </div>
+        </div>
+        <div class="kid-detail-rows">
+          <div class="kid-detail-row">
+            <div class="kid-detail-row-label">Allergens to flag</div>
+            <div class="kid-detail-tags">${allergyTags}</div>
+          </div>
+          <div class="kid-detail-row">
+            <div class="kid-detail-row-label">Eating style</div>
+            <div class="kid-detail-tags">${dietTags}</div>
+          </div>
+        </div>
+        <div class="kid-action-row">
+          <button class="kid-action-btn" onclick="startEditKid('${kid.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit profile
+          </button>
+          ${!isActive ? `<button class="kid-action-btn primary" onclick="setActiveKidAndHome('${kid.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Make active
+          </button>` : ''}
+        </div>
+      </div>
+    `);
+  });
+}
+
+function setActiveKidAndHome(kidId) {
+  state.activeKidId = kidId;
+  updateActiveKidUI();
+  goTo('home');
+}
+
+// =========================== KID SELECTOR ===========================
+function openKidSelector() {
+  goTo('kid-selector');
+}
+
+function renderKidSelector() {
+  const container = document.getElementById('selector-kid-list');
+  if (!container) return;
+  container.innerHTML = '';
+  state.kids.forEach(kid => {
+    const isActive = kid.id === state.activeKidId;
+    const allergCount = kid.allergies.size + (kid.customAllergies ? kid.customAllergies.length : 0);
+    const meta = `${formatAge(kid.age)} · ${allergCount} allergen${allergCount === 1 ? '' : 's'} flagged`;
+    container.insertAdjacentHTML('beforeend', `
+      <div class="kid-card ${isActive ? 'active' : ''}" onclick="selectKid('${kid.id}')">
+        <div class="kid-avatar ${kid.colorClass || 'color-1'}">${kid.initial}</div>
+        <div class="kid-card-info">
+          <div class="kid-card-name">${kid.name}</div>
+          <div class="kid-card-meta">${meta}</div>
+        </div>
+        <svg class="kid-card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    `);
+  });
+}
+
+function selectKid(kidId) {
+  state.activeKidId = kidId;
+  updateActiveKidUI();
+  goTo('home');
+}
+
+// =========================== SCANNING ===========================
+const scanModes = {
+  barcode: { title: 'Hold steady…', sub: 'Aim at the barcode on the back of the package' },
+  photo: { title: 'Frame the ingredient list', sub: 'Make sure the small print is readable' },
+  link: { title: 'Paste a product link', sub: 'From Amazon, Walmart, Instacart, etc.' }
+};
+
+function startScan(mode) {
+  document.getElementById('scan-mode-title').textContent = scanModes[mode].title;
+  document.getElementById('scan-mode-sub').textContent = scanModes[mode].sub;
+  goTo('scanning');
+}
+
+// =========================== RESULT DATA ===========================
+// Concise structure for 5-second reads:
+// - verdict: tight one-line label + small icon ('✓', '!', '⚠')
+// - greenFlags / redFlags: arrays of {label, sub?, tag?} — 2-6 words each
+// - insights: 4 nutrient cards with serving/package values + tone ('alert' | 'good' | 'neutral')
+const products = {
+  safe: {
+    brand: 'Happy Baby Organics',
+    name: 'Sweet Potato Puffs',
+    thumb: '🥣',
+    verdict: 'safe',
+    verdictIcon: '✓',
+    verdictLabel: 'Looks <em>good</em> to go',
+    verdictMeta: 'No flags · all checks pass',
+    servingLabel: '~10 puffs (7g)',
+    servingsPerPackage: 4,
+    greenFlags: [
+      { label: 'No allergen flags', sub: 'Free of top 9 allergens' },
+      { label: 'Fits your eating style', sub: 'Vegetarian-safe' },
+      { label: 'Heavy metals tested', sub: 'Under FDA limits' },
+      { label: 'Whole grain inside', sub: 'Brown rice flour' }
+    ],
+    redFlags: [],
+    insights: [
+      { emoji: '🍯', label: 'Added sugar', tone: 'good',    serving: '0g',    package: '0g',    contextServing: 'None — sweetness from sweet potato', contextPackage: 'Zero across the bag' },
+      { emoji: '🧂', label: 'Sodium',      tone: 'good',    serving: '15mg',  package: '60mg',  contextServing: '~2% of daily limit',                contextPackage: '~8% of daily limit' },
+      { emoji: '🌾', label: 'Fiber',       tone: 'neutral', serving: '1g',    package: '4g',    contextServing: 'Modest per serving',                contextPackage: 'Decent across the bag' },
+      { emoji: '✨', label: 'Iron',        tone: 'good',    serving: '6% DV', package: '24% DV', contextServing: 'Small contribution',                contextPackage: '~1/4 of daily target' }
+    ],
+    showAlt: false
+  },
+  allergen: {
+    brand: "Annie's Homegrown",
+    name: 'Cheddar Bunnies Crackers',
+    thumb: '🥨',
+    verdict: 'flag',
+    verdictIcon: '!',
+    verdictLabel: 'Contains <em>dairy</em>',
+    verdictMeta: 'Allergen alert · 1 red flag',
+    servingLabel: '~52 pieces (30g)',
+    servingsPerPackage: 7,
+    greenFlags: [
+      { label: 'No other allergens', sub: 'Free of peanut, tree nut, sesame, egg' },
+      { label: 'Whole wheat base', sub: 'Whole grain first' },
+      { label: 'Fits diet rules', sub: 'Vegetarian-safe' }
+    ],
+    redFlags: [
+      { label: 'Cheddar, milk, whey', sub: 'You flagged dairy', tag: 'allergen', tagLabel: 'Allergen' },
+      { label: '"May contain" eggs', sub: 'Cross-contamination warning' },
+      { label: 'High sodium per serving', sub: '180mg · ~25% of toddler limit' }
+    ],
+    insights: [
+      { emoji: '🍯', label: 'Added sugar', tone: 'good',    serving: '<1g',     package: '~5g',    contextServing: 'Almost none',           contextPackage: 'Modest if box finished' },
+      { emoji: '🧂', label: 'Sodium',      tone: 'alert',   serving: '180mg',   package: '1260mg', contextServing: 'High for a snack',     contextPackage: 'Over daily limit' },
+      { emoji: '🌾', label: 'Whole grain', tone: 'good',    serving: 'Yes',     package: 'Yes',    contextServing: 'Whole wheat flour',     contextPackage: 'Whole wheat flour' },
+      { emoji: '🥛', label: 'Calcium',     tone: 'neutral', serving: '4% DV',   package: '28% DV', contextServing: 'From the cheese',      contextPackage: 'Solid across the box' }
+    ],
+    showAlt: true,
+    alt: { thumb: '🥖', name: "Annie's Bunny Grahams (dairy-free)", store: 'Walmart · $3.48', tag: 'Same brand' }
+  },
+  restriction: {
+    brand: 'Sargento',
+    name: 'String Cheese',
+    thumb: '🧀',
+    verdict: 'warn',
+    verdictIcon: '⚠',
+    verdictLabel: 'Doesn\'t fit your <em>diet</em>',
+    verdictMeta: 'Diet conflict · 2 red flags',
+    servingLabel: '1 stick (24g)',
+    servingsPerPackage: 12,
+    greenFlags: [
+      { label: 'No top-9 allergens', sub: 'Other than dairy itself' },
+      { label: 'Excellent calcium', sub: '20% DV per stick' },
+      { label: 'High protein', sub: '6g per stick' }
+    ],
+    redFlags: [
+      { label: 'Animal-derived rennet', sub: 'Not vegetarian by Jain/strict-veg standards', tag: 'diet', tagLabel: 'Diet conflict' },
+      { label: 'Contains dairy', sub: 'You flagged dairy', tag: 'allergen', tagLabel: 'Allergen' }
+    ],
+    insights: [
+      { emoji: '🧀', label: 'Protein', tone: 'good',    serving: '6g',     package: '72g',     contextServing: 'Solid snack-sized amount', contextPackage: 'High across the pack' },
+      { emoji: '🧂', label: 'Sodium',  tone: 'alert',   serving: '170mg',  package: '2040mg',  contextServing: 'Moderate',                 contextPackage: 'Far over daily limit' },
+      { emoji: '🦴', label: 'Calcium', tone: 'good',    serving: '20% DV', package: '240% DV', contextServing: 'Excellent source',         contextPackage: 'Far over daily target' },
+      { emoji: '✨', label: 'Vitamin A', tone: 'neutral', serving: '4% DV',  package: '48% DV',  contextServing: 'Small contribution',       contextPackage: 'About half daily target' }
+    ],
+    showAlt: true,
+    alt: { thumb: '🧀', name: 'Polly-O Mozzarella Sticks', store: 'Kroger · $4.29', tag: 'Plant rennet' }
+  },
+  sugary: {
+    brand: 'Plum Organics',
+    name: 'Mighty 4 Banana Pouch',
+    thumb: '🍌',
+    verdict: 'warn',
+    verdictIcon: '⚠',
+    verdictLabel: 'High <em>added sugar</em>',
+    verdictMeta: 'Watch out · 1 red flag',
+    servingLabel: '1 pouch (113g)',
+    servingsPerPackage: 1,
+    greenFlags: [
+      { label: 'No allergen flags', sub: 'Free of top 9 allergens' },
+      { label: 'Fits your eating style', sub: 'Vegetarian-safe' },
+      { label: 'Decent fiber', sub: '3g from fruit-grain blend' }
+    ],
+    redFlags: [
+      { label: '10g added sugar', sub: '~40% of daily max for ages 2–5; AAP says zero before 2', tag: 'heavy', tagLabel: 'Watch' }
+    ],
+    insights: [
+      { emoji: '🍯', label: 'Added sugar', tone: 'alert',   serving: '10g',    package: '10g',    contextServing: '~40% of daily max', contextPackage: 'Single-serve pouch' },
+      { emoji: '🧂', label: 'Sodium',      tone: 'good',    serving: '20mg',   package: '20mg',   contextServing: 'Low',               contextPackage: 'Low' },
+      { emoji: '🌾', label: 'Fiber',       tone: 'good',    serving: '3g',     package: '3g',     contextServing: 'Decent fiber',      contextPackage: 'Single-serve' },
+      { emoji: '🦴', label: 'Iron',        tone: 'neutral', serving: '4% DV',  package: '4% DV',  contextServing: 'Modest contribution', contextPackage: 'Modest' }
+    ],
+    showAlt: true,
+    alt: { thumb: '🍎', name: 'Once Upon a Farm — Apple & Banana', store: 'Target · $2.49', tag: 'No added sugar' }
+  },
+  biscuit: {
+    brand: "Earth's Best Organic",
+    name: 'Banana Teething Biscuits',
+    thumb: '🍪',
+    verdict: 'safe',
+    verdictIcon: '✓',
+    verdictLabel: 'Looks <em>good</em> to go',
+    verdictMeta: 'No flags per serving · watch the box',
+    servingLabel: '2 biscuits (14g)',
+    servingsPerPackage: 6,
+    greenFlags: [
+      { label: 'No allergen flags', sub: 'Free of peanut, tree nut, dairy, egg' },
+      { label: 'Whole grain first', sub: 'Whole wheat + oat flour' },
+      { label: 'Fits your eating style', sub: 'Vegetarian-safe' },
+      { label: 'Low sodium', sub: '10mg per serving' }
+    ],
+    redFlags: [
+      { label: 'Sugar adds up at full box', sub: '12g across 6 servings · half daily max' }
+    ],
+    insights: [
+      { emoji: '🍯', label: 'Added sugar', tone: 'neutral', serving: '2g',    package: '12g',    contextServing: 'Modest per serving', contextPackage: '~½ daily max if finished' },
+      { emoji: '🧂', label: 'Sodium',      tone: 'good',    serving: '10mg',  package: '60mg',   contextServing: 'Very low',           contextPackage: 'Within limits' },
+      { emoji: '🌾', label: 'Fiber',       tone: 'neutral', serving: '1g',    package: '6g',     contextServing: 'Small per serving',  contextPackage: 'Reasonable across box' },
+      { emoji: '🦴', label: 'Iron',        tone: 'neutral', serving: '2% DV', package: '12% DV', contextServing: 'Light contribution', contextPackage: 'Modest across box' }
+    ],
+    showAlt: false
+  }
+};
+
+// =========================== SHOW RESULT ===========================
+function showResult(type) {
+  const p = products[type];
+  if (!p) return;
+  state.currentResultKey = type;
+  state.servingMode = 'serving';
+
+  // Top bar (sticky)
+  document.getElementById('result-top-bar').className = 'result-top-bar ' + p.verdict;
+  document.getElementById('result-thumb').textContent = p.thumb;
+  document.getElementById('result-brand').textContent = p.brand;
+  document.getElementById('result-name').textContent = p.name;
+
+  // Verdict band
+  const band = document.getElementById('verdict-band');
+  band.className = 'verdict-band ' + p.verdict;
+  document.getElementById('verdict-icon').textContent = p.verdictIcon;
+  document.getElementById('verdict-label').innerHTML = p.verdictLabel;
+  document.getElementById('verdict-meta').textContent = p.verdictMeta;
+
+  document.getElementById('result-child-name').textContent = getActiveKidName();
+
+  // Serving info banner
+  const servingsLabel = `${p.servingsPerPackage} serving${p.servingsPerPackage === 1 ? '' : 's'}`;
+  document.getElementById('serving-info-text').textContent =
+    `Serving: ${p.servingLabel} · ${servingsLabel} per package`;
+
+  // Render green flags
+  const greenList = document.getElementById('flag-list-green');
+  greenList.innerHTML = '';
+  if (p.greenFlags.length === 0) {
+    greenList.innerHTML = '<div class="flag-empty">Nothing notable</div>';
+  } else {
+    p.greenFlags.forEach(f => {
+      greenList.innerHTML += `
+        <div class="flag-item">
+          <span class="flag-item-icon">✓</span>
+          <span class="flag-item-text"><b>${f.label}</b>${f.sub ? `<br><span style="color: var(--ink-soft); font-size: 11px;">${f.sub}</span>` : ''}</span>
+        </div>`;
+    });
+  }
+
+  // Render red flags
+  const redList = document.getElementById('flag-list-red');
+  redList.innerHTML = '';
+  if (p.redFlags.length === 0) {
+    redList.innerHTML = '<div class="flag-empty">Nothing flagged 🎉</div>';
+  } else {
+    p.redFlags.forEach(f => {
+      const tagHtml = f.tag ? `<span class="flag-item-tag ${f.tag}">${f.tagLabel}</span>` : '';
+      redList.innerHTML += `
+        <div class="flag-item">
+          <span class="flag-item-icon">!</span>
+          <span class="flag-item-text"><b>${f.label}</b>${tagHtml}${f.sub ? `<br><span style="color: var(--ink-soft); font-size: 11px;">${f.sub}</span>` : ''}</span>
+        </div>`;
+    });
+  }
+
+  // Reset toggle to "Per serving"
+  document.getElementById('toggle-serving').classList.add('active');
+  document.getElementById('toggle-package').classList.remove('active');
+  renderInsights();
+
+  // Alternatives
+  const altSection = document.getElementById('alt-section');
+  if (p.showAlt && p.alt) {
+    altSection.style.display = 'block';
+    document.getElementById('alt-card').innerHTML = `
+      <div class="alt-thumb">${p.alt.thumb}</div>
+      <div class="alt-info">
+        <div class="alt-name">${p.alt.name}</div>
+        <div class="alt-store">${p.alt.store}</div>
+      </div>
+      <span class="alt-tag">${p.alt.tag}</span>`;
+  } else {
+    altSection.style.display = 'none';
+  }
+
+  goTo('result');
+  setTimeout(() => {
+    const rc = document.querySelector('#screen-result .result-content');
+    if (rc) rc.scrollTop = 0;
+  }, 50);
+}
+
+function renderInsights() {
+  const p = products[state.currentResultKey];
+  if (!p) return;
+  const ig = document.getElementById('insight-grid');
+  ig.innerHTML = '';
+  const isPackage = state.servingMode === 'package';
+  p.insights.forEach(i => {
+    const value = isPackage ? i.package : i.serving;
+    const ctx = isPackage ? i.contextPackage : i.contextServing;
+    const tone = i.tone || 'neutral';
+    let tagHtml = '';
+    if (tone === 'alert') tagHtml = '<span class="insight-mini-tag alert">High</span>';
+    else if (tone === 'good') tagHtml = '<span class="insight-mini-tag good">Good</span>';
+    ig.innerHTML += `
+      <div class="insight-card ${tone}">
+        <div class="insight-row-top">
+          <span class="insight-emoji">${i.emoji}</span>
+          ${tagHtml}
+        </div>
+        <div class="insight-label">${i.label}</div>
+        <div class="insight-value">${value}</div>
+        <div class="insight-context">${ctx}</div>
+      </div>`;
+  });
+  const mult = document.getElementById('serving-multiplier-info');
+  if (isPackage && p.servingsPerPackage > 1) {
+    mult.textContent = `× ${p.servingsPerPackage} servings`;
+  } else if (isPackage && p.servingsPerPackage === 1) {
+    mult.textContent = 'single-serve';
+  } else {
+    mult.textContent = '';
+  }
+}
+
+function toggleServing(mode) {
+  state.servingMode = mode;
+  document.getElementById('toggle-serving').classList.toggle('active', mode === 'serving');
+  document.getElementById('toggle-package').classList.toggle('active', mode === 'package');
+  renderInsights();
+}
+
+// =========================== BOT ===========================
+function openBot() {
+  state.previousScreen = document.querySelector('.screen.active').id.replace('screen-', '');
+  initBotConversation();
+  goTo('bot');
+}
+
+function closeBot() {
+  goTo(state.previousScreen);
+}
+
+function initBotConversation() {
+  const messages = document.getElementById('bot-messages');
+  messages.innerHTML = '';
+  const name = getActiveKidName();
+  const opener = `Hey there. I'm Nouri — here to help, never to lecture. <strong>What's on your mind</strong> about ${name}'s snacks today?`;
+  appendBotMsg(opener, true);
+}
+
+function appendBotMsg(text, isBot, source) {
+  const messages = document.getElementById('bot-messages');
+  const msg = document.createElement('div');
+  msg.className = 'bot-msg ' + (isBot ? 'from-bot' : 'from-user');
+  if (isBot) {
+    msg.innerHTML = `
+      <div class="bot-msg-avatar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B3A28" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="bot-msg-bubble">${text}${source ? `<div class="bot-msg-source">${source}</div>` : ''}</div>`;
+  } else {
+    msg.innerHTML = `<div class="bot-msg-bubble">${text}</div>`;
+  }
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function showTyping() {
+  const messages = document.getElementById('bot-messages');
+  const typing = document.createElement('div');
+  typing.className = 'bot-typing';
+  typing.id = 'typing-indicator';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  messages.appendChild(typing);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+const botResponses = {
+  'why was this product flagged': {
+    text: "Looking at the last item — Annie's Cheddar Bunnies — it was flagged because <strong>cheddar cheese, milk, and whey</strong> are listed in the ingredients, and you have <strong>dairy alerts on</strong> for your little one. It also has a \"may contain eggs\" warning, which I'm treating as info-only since you didn't flag eggs.",
+    source: 'Source: FDA Food Allergen Labeling and Consumer Protection Act (FALCPA)'
+  },
+  'how much sugar is too much for a toddler': {
+    text: "For toddlers <strong>under 2</strong>, the AAP recommends <strong>no added sugar at all</strong>. For ages 2–5, less than <strong>25g per day</strong> total. Quick sniff test: if a snack has more than 6g added sugar in one serving, that's already a quarter of the daily limit for older toddlers. Naturally occurring sugar in fruit and milk doesn't count toward this.",
+    source: 'Source: AAP and AHA joint guidelines on added sugars, 2017'
+  },
+  'is my child getting enough iron': {
+    text: "I'd need a few days of scans to give you a real answer — that's on the roadmap. In general, <strong>toddlers 1–3 need about 7mg of iron per day</strong>, which is more than adults. Common shortfalls show up in kids who drank a lot of milk and skipped iron-rich solids. Want me to flag iron-rich options when you scan?",
+    source: 'Source: Institute of Medicine Dietary Reference Intakes; AAP iron deficiency screening guidelines'
+  },
+  'what are good walmart-brand alternatives': {
+    text: "Great question. For pouches: <strong>Parent's Choice Organics</strong> is Walmart's in-house line and has tested at lower heavy-metal levels in California's 2024 disclosure data than several premium brands. For crackers: <strong>Great Value Whole Wheat Crackers</strong> for older kids. I default to comparing within Walmart unless you tell me otherwise — I won't send you to brands that aren't on your shelf.",
+    source: 'Source: California AB 899 disclosure data; Healthy Babies Bright Futures supplemental testing'
+  }
+};
+
+function findResponse(question) {
+  const q = question.toLowerCase().replace(/[?.,!]/g, '').trim();
+  for (const key in botResponses) {
+    if (q.includes(key.split(' ').slice(0, 3).join(' ')) ||
+        key.split(' ').filter(w => q.includes(w)).length >= 3) {
+      return botResponses[key];
+    }
+  }
+  return {
+    text: "That's a thoughtful question. In a real Nouri conversation, I'd pull from the AAP Pediatric Nutrition Handbook and your scan history to answer specifically for " + getActiveKidName() + ". <strong>What I won't do:</strong> make you feel anxious or push expensive boutique brands.",
+    source: "Tell me more about what you're wondering — I'll do my best."
+  };
+}
+
+function askNouri(question) {
+  appendBotMsg(question, false);
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    const r = findResponse(question);
+    appendBotMsg(r.text, true, r.source);
+  }, 900 + Math.random() * 600);
+}
+
+function sendMessage() {
+  const input = document.getElementById('bot-input');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  askNouri(q);
+}
+
+// =========================== INIT ===========================
+window.addEventListener('DOMContentLoaded', () => {
+  updateGreeting();
+});
+</script>
+
+</body>
+</html>

@@ -167,7 +167,15 @@ const useStore = create((set, get) => ({
     }
   },
 
-  setActiveKid: (id) => set({ activeKidId: id }),
+  // Switching kid: clear the local recentScans + selectedProduct so the
+  // previous kid's session data doesn't leak into the new kid's view.
+  // Server-side history will be re-fetched per kid on the home screen.
+  setActiveKid: (id) =>
+    set({
+      activeKidId: id,
+      recentScans: [],
+      selectedProduct: null,
+    }),
   getActiveKid: () => {
     const { kids, activeKidId } = get();
     return kids.find((k) => k.id === activeKidId) || kids[0] || null;

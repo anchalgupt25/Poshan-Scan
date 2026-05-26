@@ -360,6 +360,18 @@ export default function ScanningScreen() {
           <div className="link-desc">Amazon, Walmart, Target, Instacart — or just type a name</div>
         </div>
 
+        <div className="scan-tip" style={{ marginBottom: 16 }}>
+          <div className="scan-tip-icon">🧪</div>
+          <div>
+            <strong>This feature is still in beta.</strong>
+            <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 4, lineHeight: 1.5 }}>
+              Retailer site formats change often, so some links may not return a match.
+              If it doesn't work, try <strong>Enter Barcode</strong> (most reliable) or
+              <strong> Scan Label</strong> (camera + AI) — both are production-ready.
+            </div>
+          </div>
+        </div>
+
         <input
           className="text-input"
           type="text"
@@ -390,14 +402,26 @@ export default function ScanningScreen() {
         {status === 'notfound' && (
           <div className="lookup-error">
             <div style={{ fontSize: 28, marginBottom: 6 }}>🔍</div>
-            <strong>No match</strong>
+            <strong>Couldn't find this one</strong>
             <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6, lineHeight: 1.5, textAlign: 'left' }}>
               {errorMsg}
               <br /><br />
-              <strong style={{ color: 'var(--ink-soft)' }}>Try this:</strong>
-              <br />• Find the UPC barcode on the package
-              <br />• Open <strong>Scan Barcode</strong> and enter it manually
+              <strong style={{ color: 'var(--ink-soft)' }}>The other two scan modes are more reliable — try one of these:</strong>
             </div>
+            <button
+              className="btn-primary"
+              style={{ marginTop: 12, maxWidth: 280 }}
+              onClick={() => { useStore.getState().setScanMethod('barcode'); useStore.getState().navigate('scanning'); }}
+            >
+              🔢 Enter Barcode instead
+            </button>
+            <button
+              className="btn-ghost"
+              style={{ marginTop: 8, maxWidth: 280 }}
+              onClick={() => { useStore.getState().setScanMethod('photo'); useStore.getState().navigate('scanning'); }}
+            >
+              📷 Scan the nutrition label
+            </button>
           </div>
         )}
 
