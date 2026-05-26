@@ -25,19 +25,20 @@ export default function BotScreen() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [chips, setChips] = useState([
-    'How was this scored?',
-    'Why was it flagged?',
-    "How much sugar is okay for my child?",
-    'Better alternatives at Walmart?',
+    'Why was this flagged?',
+    'How much sugar is too much for a toddler?',
+    'Is my child getting enough iron?',
+    'What are good Walmart-brand alternatives?',
   ]);
   const scrollRef = useRef(null);
 
-  // Initial greet — once
+  // Initial greet — once. Tone matches prototype: "here, no judgment".
   useEffect(() => {
     if (messages.length === 0) {
+      const childName = activeKid?.name || 'your little one';
       const greeting = scan?.product
-        ? `Hi! I'm Nouri 🤖 — I see you just scanned **${scan.product.name}**. Ask me anything about the score, ingredients, or flags for ${activeKid?.name || 'your child'}.`
-        : `Hi! I'm Nouri 🤖 — your nutrition guide for ${activeKid?.name || 'your child'}. Ask me about a scan, ingredients, or how the score works.`;
+        ? `Hey there. I'm Nouri — **here to help, never to lecture.** I see you just scanned **${scan.product.name}**. What's on your mind about it for ${childName}?`
+        : `Hey there. I'm Nouri — **here to help, never to lecture.** What's on your mind about ${childName}'s snacks today?`;
       addMessage({ id: 'welcome', role: 'bot', text: greeting });
     }
   }, []);
@@ -82,22 +83,27 @@ export default function BotScreen() {
 
   return (
     <div className="screen bot-screen animate-fade-in">
-      <StatusBar />
       <div className="bot-header">
-        <button className="nav-back" onClick={() => navigate(previousScreen || 'home')}>←</button>
-        <div className="bot-avatar">🤖</div>
-        <div style={{ flex: 1 }}>
-          <div className="bot-title">Nouri</div>
-          <div className="bot-subtitle">Nutrition guide · educational only</div>
+        <button className="bot-back" onClick={() => navigate(previousScreen || 'home')}>←</button>
+        <div className="bot-header-avatar">💬</div>
+        <div className="bot-header-text">
+          <div className="bot-header-name">Nouri</div>
+          <div className="bot-header-status">here, no judgment</div>
         </div>
       </div>
 
       <div ref={scrollRef} className="bot-messages">
-        {messages.map((m) => (
-          <div key={m.id} className={`bot-msg ${m.role}`}>
-            {m.role === 'bot' ? formatText(m.text) : m.text}
-          </div>
-        ))}
+        {messages.map((m) => {
+          const fromBot = m.role === 'bot';
+          return (
+            <div key={m.id} className={`bot-msg ${fromBot ? 'from-bot' : 'from-user'}`}>
+              {fromBot && <div className="bot-msg-avatar">💬</div>}
+              <div className="bot-msg-bubble">
+                {fromBot ? formatText(m.text) : m.text}
+              </div>
+            </div>
+          );
+        })}
         {typing && (
           <div className="bot-typing">
             <span /><span /><span />
@@ -106,9 +112,9 @@ export default function BotScreen() {
       </div>
 
       {chips.length > 0 && !typing && (
-        <div className="bot-chips">
+        <div className="bot-suggestions">
           {chips.map((c, i) => (
-            <button key={i} className="bot-chip" onClick={() => sendMessage(c)}>{c}</button>
+            <button key={i} className="suggestion-chip" onClick={() => sendMessage(c)}>{c}</button>
           ))}
         </div>
       )}
@@ -116,7 +122,7 @@ export default function BotScreen() {
       <div className="bot-input-row">
         <input
           className="bot-input"
-          placeholder="Ask Nouri…"
+          placeholder="Ask Nouri anything…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
@@ -126,6 +132,7 @@ export default function BotScreen() {
           className="bot-send"
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || typing}
+          aria-label="Send"
         >
           ➤
         </button>

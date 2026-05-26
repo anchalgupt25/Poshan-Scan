@@ -29,13 +29,14 @@ export default function Onboard3() {
     <div className="screen onboard-screen animate-fade-in">
       <StatusBar />
       <div className="onboard-header">
-        <div className="step-dots">
-          <div className="step-dot done" /><div className="step-dot done" />
-          <div className="step-dot active" /><div className="step-dot" />
+        <div className="onboard-progress">
+          <span className="done" /><span className="done" /><span className="active" /><span />
         </div>
         <p className="onboard-step-label">Step 3 of 4 · Allergens to watch for</p>
-        <div className="onboard-question">Anything we should <em>flag with care</em>?</div>
-        <div className="onboard-sub">
+        <div className="onboard-title">
+          Anything we should <em>flag with care</em>?
+        </div>
+        <div className="onboard-subtitle">
           Tap any allergens we should always alert on. Includes hidden names and "may contain" warnings.
         </div>
       </div>
@@ -51,24 +52,21 @@ export default function Onboard3() {
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 14, marginBottom: 18 }}>
+        <p style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 14, marginBottom: 18, fontStyle: 'italic' }}>
           No allergies right now? Just continue — you can add them anytime.
-        </div>
-        <label className="onboard-label">Other allergies</label>
-        <p style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 8 }}>
-          Optional — anything else we should flag for your child
         </p>
+        <label className="onboard-label">Other allergens or ingredients to flag</label>
         <input
           type="text"
           className="text-input"
-          placeholder="e.g. coconut, mustard, lupin…"
+          placeholder="cashew, pistachio, kiwi…"
           value={form.allergiesOther || ''}
           onChange={(e) => updateForm({ allergiesOther: e.target.value })}
         />
       </div>
       <div className="onboard-bottom">
         <button className="btn-primary" onClick={() => navigate('onboard4')}>
-          Continue →
+          Continue
         </button>
       </div>
     </div>

@@ -1,95 +1,219 @@
+/* ───────── Splash ───────── */
 .splash-screen {
-  background:
-    radial-gradient(circle at 50% 40%, rgba(244, 216, 154, 0.4) 0%, transparent 60%),
-    linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%);
+  background: transparent;
   align-items: center;
   justify-content: center;
   padding: 60px 32px;
 }
 .splash-content {
   text-align: center;
-  display: flex; flex-direction: column;
-  align-items: center; gap: 20px;
-  flex: 1; justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  justify-content: center;
+  animation: splashRise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
-.splash-logo { font-size: 80px; margin-bottom: 8px; animation: logoFloat 4s ease-in-out infinite; }
+.splash-logo-mark {
+  margin-bottom: 8px;
+  animation: logoFloat 4s ease-in-out infinite;
+}
 .splash-brand {
   font-family: var(--serif);
-  font-size: 52px; font-weight: 500;
+  font-size: 56px;
+  font-weight: 500;
   color: var(--rust);
   letter-spacing: -0.02em;
   line-height: 1;
 }
-.splash-brand em { font-style: italic; font-weight: 400; color: var(--terracotta); }
+.splash-brand em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terracotta);
+}
 .splash-tagline {
   font-family: var(--serif);
-  font-size: 17px; font-weight: 300; font-style: italic;
+  font-size: 18px;
+  font-weight: 300;
+  font-style: italic;
   color: var(--ink-soft);
-  max-width: 260px; line-height: 1.5;
+  max-width: 280px;
+  line-height: 1.5;
 }
-.splash-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
-.splash-pill {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px;
-  background: rgba(255,255,255,0.7);
+.splash-cta {
+  margin-top: 24px;
+  padding: 18px 48px;
+  background: var(--rust);
+  color: var(--cream);
+  border: none;
   border-radius: 100px;
-  font-size: 13px; font-weight: 500;
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(139, 58, 40, 0.25);
+  transition: all 0.2s;
+}
+.splash-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(139, 58, 40, 0.32);
+}
+.splash-secondary {
+  margin-top: 4px;
+  padding: 10px;
+  background: transparent;
+  border: none;
   color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
 }
-.pill-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--sage); display: inline-block;
+.splash-secondary:hover { color: var(--terracotta); }
+.splash-footer {
+  position: absolute;
+  bottom: 32px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
 }
-.splash-bottom { width: 100%; flex-shrink: 0; padding-top: 24px; }
 
-.onboard-screen { background: var(--cream); }
-.onboard-header { padding: 20px 24px 0; flex-shrink: 0; }
+/* ───────── Onboarding screens ───────── */
+.onboard-screen {
+  background: transparent;
+}
+.onboard-header {
+  padding: 18px 24px 0;
+  flex-shrink: 0;
+}
 .onboard-step-label {
-  font-size: 11px; font-weight: 600;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--terracotta);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 12px;
 }
-.onboard-question {
+.onboard-question, .onboard-title {
   font-family: var(--serif);
-  font-size: 28px; font-weight: 400;
+  font-size: 32px;
+  font-weight: 400;
   color: var(--ink);
-  margin-bottom: 8px; line-height: 1.15;
-  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
 }
-.onboard-question em { font-style: italic; font-weight: 400; color: var(--terracotta); }
-.onboard-sub { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
-.onboard-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.onboard-question em, .onboard-title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terracotta);
+}
+.onboard-sub, .onboard-subtitle {
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.dietary-info-banner {
+  background: rgba(127, 163, 114, 0.12);
+  border-left: 3px solid var(--sage);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--sage-deep);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.onboard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px 20px;
+}
 .onboard-section { margin-bottom: 24px; }
 .onboard-label {
-  font-size: 11px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   margin-bottom: 10px;
   display: block;
 }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .onboard-bottom {
   padding: 16px 24px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   flex-shrink: 0;
 }
-.age-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.nutrient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Onboard 1: watch cards */
+.watch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.watch-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+}
+.watch-emoji { font-size: 28px; margin-bottom: 8px; }
+.watch-name {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.watch-detail {
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.watch-tag {
+  position: absolute;
+  top: 12px; right: 12px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 100px;
+}
+.watch-tag.alert { background: var(--coral); color: var(--cream); }
+.watch-tag.good  { background: var(--sage); color: var(--cream); }
+.watch-footnote {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 16px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Legacy compat */
+.nutrient-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 .nutrient-card {
-  background: var(--white); border: 1px solid var(--line);
+  background: var(--white);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: 16px; text-align: center;
+  padding: 16px;
+  text-align: center;
 }
 .nutrient-card .n-emoji { font-size: 32px; margin-bottom: 6px; }
 .nutrient-card .n-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 .nutrient-card .n-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.3; }
-.dietary-info-banner {
-  background: rgba(127, 163, 114, 0.12);
-  border-left: 3px solid var(--sage);
-  padding: 14px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--ink-soft);
-  line-height: 1.5;
-}
