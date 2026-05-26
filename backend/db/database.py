@@ -114,33 +114,30 @@ def _split_statements(script: str) -> list[str]:
 class _TursoAdapter:
     """Thin wrapper that mimics aiosqlite.Connection for route code.
 
-    libsql_client.create_client_sync() returns a sync client; we wrap each
-    method to expose the existing async interface so callers don't change.
+    Uses the async libsql Client directly — no sync-wrap-in-threadpool
+    indirection. The Client is a long-lived singleton; we DON'T close it
+    per-request (the route's try/finally just calls a no-op close).
     """
 
     def __init__(self, client):
         self._client = client
 
     async def execute_query(self, sql: str, params: Iterable = ()) -> list[dict]:
-        # libsql_client is sync, but the calls are tiny network RPCs — fine to
-        # call from an async route since FastAPI runs handlers in a threadpool
-        # for sync calls via run_in_threadpool. We use the sync client and
-        # wrap with a tiny await-sleep(0) to yield.
-        import asyncio
-        result = await asyncio.to_thread(self._client.execute, sql, list(params))
+        result = await self._client.execute(sql, list(params))
         cols = result.columns
         return [dict(zip(cols, row)) for row in result.rows]
 
     async def execute_write(self, sql: str, params: Iterable = ()) -> int:
-        import asyncio
-        result = await asyncio.to_thread(self._client.execute, sql, list(params))
+        result = await self._client.execute(sql, list(params))
         return result.last_insert_rowid or 0
 
     async def executescript(self, script: str) -> None:
-        import asyncio
         for stmt in _split_statements(script):
+            # Skip pure-comment chunks
+            if not any(line.strip() and not line.strip().startswith("--") for line in stmt.splitlines()):
+                continue
             try:
-                await asyncio.to_thread(self._client.execute, stmt)
+                await self._client.execute(stmt)
             except Exception as e:
                 msg = str(e).lower()
                 if "already exists" in msg or "duplicate column" in msg:
@@ -152,8 +149,7 @@ class _TursoAdapter:
         pass
 
     async def close(self) -> None:
-        # The libsql_client connection is shared — DON'T close it per-request,
-        # just no-op so callers can keep their try/finally pattern unchanged.
+        # Singleton client — don't close per-request.
         pass
 
 
@@ -218,10 +214,15 @@ async def get_db():
         global _turso_client
         if _turso_client is None:
             import libsql_client
-            _turso_client = libsql_client.create_client_sync(
-                url=_TURSO_URL,
-                auth_token=_TURSO_TOKEN,
-            )
+            try:
+                _turso_client = libsql_client.create_client(
+                    url=_TURSO_URL,
+                    auth_token=_TURSO_TOKEN,
+                )
+                logger.info("Turso client created for url=%s", _TURSO_URL.split('@')[-1])
+            except Exception as e:
+                logger.exception("Failed to create Turso client")
+                raise
         adapter = _TursoAdapter(_turso_client)
     else:
         import aiosqlite
@@ -229,7 +230,12 @@ async def get_db():
         conn.row_factory = aiosqlite.Row
         adapter = _SqliteAdapter(conn)
 
-    await _ensure_schema(adapter)
+    try:
+        await _ensure_schema(adapter)
+    except Exception as e:
+        logger.exception("Schema initialization failed (backend=%s)",
+                         "turso" if USE_TURSO else "sqlite")
+        raise
     return adapter
 
 
