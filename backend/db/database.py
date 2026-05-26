@@ -208,20 +208,35 @@ async def _ensure_schema(adapter) -> None:
     logger.info("DB schema initialized (backend=%s)", "turso" if USE_TURSO else "sqlite")
 
 
+def _normalize_turso_url(raw: str) -> str:
+    """Force HTTPS transport.
+
+    `libsql://...` defaults to WebSocket (Hrana). WebSockets are sometimes
+    blocked or flaky on shared hosting (Render free, Heroku, etc.). HTTPS
+    transport is universally reachable. Rewrite scheme to https:// so the
+    client uses the HTTP JSON API instead.
+    """
+    if raw.startswith("libsql://"):
+        return "https://" + raw[len("libsql://"):]
+    return raw
+
+
 async def get_db():
     """Return a per-request DB adapter. Use as `db = await get_db()`."""
     if USE_TURSO:
         global _turso_client
         if _turso_client is None:
             import libsql_client
+            normalized = _normalize_turso_url(_TURSO_URL)
             try:
                 _turso_client = libsql_client.create_client(
-                    url=_TURSO_URL,
+                    url=normalized,
                     auth_token=_TURSO_TOKEN,
                 )
-                logger.info("Turso client created for url=%s", _TURSO_URL.split('@')[-1])
-            except Exception as e:
-                logger.exception("Failed to create Turso client")
+                logger.info("Turso client created (transport=https) for %s",
+                            normalized.split('@')[-1])
+            except Exception:
+                logger.exception("Failed to create Turso client (url=%s)", normalized)
                 raise
         adapter = _TursoAdapter(_turso_client)
     else:
@@ -232,7 +247,7 @@ async def get_db():
 
     try:
         await _ensure_schema(adapter)
-    except Exception as e:
+    except Exception:
         logger.exception("Schema initialization failed (backend=%s)",
                          "turso" if USE_TURSO else "sqlite")
         raise

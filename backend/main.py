@@ -71,6 +71,30 @@ async def health():
     }
 
 
+@app.get("/health/db")
+async def db_health():
+    """Quick DB connectivity probe — surfaces the actual exception (not a
+    bare 500) so we can debug Turso/SQLite connectivity from any browser.
+    """
+    import traceback
+    from .db.database import get_db, USE_TURSO, fetch_one
+    try:
+        db = await get_db()
+        try:
+            row = await fetch_one(db, "SELECT 1 AS n", ())
+        finally:
+            await db.close()
+        return {"ok": True, "backend": "turso" if USE_TURSO else "sqlite", "probe": row}
+    except Exception as e:
+        return {
+            "ok": False,
+            "backend": "turso" if USE_TURSO else "sqlite",
+            "error_type": type(e).__name__,
+            "error": str(e),
+            "trace": traceback.format_exc().splitlines()[-6:],
+        }
+
+
 @app.get("/")
 async def root():
     return {
