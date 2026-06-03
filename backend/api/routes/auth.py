@@ -184,12 +184,21 @@ async def require_auth(authorization: Optional[str] = Header(default=None)) -> s
     return email
 
 
+def _admin_emails_set() -> set[str]:
+    raw = os.getenv("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
 @router.get("/me")
 async def whoami(authorization: Optional[str] = Header(default=None)) -> dict:
     email = _bearer_email(authorization)
     if not email:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    return {"email": email, "authenticated": True}
+    return {
+        "email": email,
+        "authenticated": True,
+        "is_admin": email.lower() in _admin_emails_set(),
+    }
 
 
 @router.post("/logout")

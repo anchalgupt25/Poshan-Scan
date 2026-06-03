@@ -9,6 +9,7 @@ export default function ProfileScreen() {
   const setActiveKid = useStore((s) => s.setActiveKid);
   const resetOnboardForm = useStore((s) => s.resetOnboardForm);
   const authEmail = useStore((s) => s.authEmail);
+  const isAdmin = useStore((s) => s.isAdmin);
   const logout = useStore((s) => s.logout);
 
   return (
@@ -61,6 +62,22 @@ export default function ProfileScreen() {
               </div>
               <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{authEmail}</div>
             </div>
+
+            {isAdmin && (
+              <button
+                className="btn-ghost"
+                onClick={() => navigate('admin')}
+                style={{
+                  marginTop: 10,
+                  borderColor: 'var(--terracotta)',
+                  color: 'var(--terracotta)',
+                  fontWeight: 600,
+                }}
+              >
+                📊 Open admin dashboard
+              </button>
+            )}
+
             <button
               className="btn-ghost"
               onClick={() => { if (confirm('Sign out of Nouri Scan?')) logout(); }}

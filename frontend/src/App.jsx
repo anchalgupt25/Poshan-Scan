@@ -12,6 +12,7 @@ import ResultScreen from './components/result/ResultScreen';
 import BotScreen from './components/bot/BotScreen';
 import ProfileScreen from './components/profile/ProfileScreen';
 import KidSelector from './components/profile/KidSelector';
+import AdminScreen from './components/admin/AdminScreen';
 
 const screens = {
   splash: SplashScreen,
@@ -26,6 +27,7 @@ const screens = {
   bot: BotScreen,
   profile: ProfileScreen,
   kidSelector: KidSelector,
+  admin: AdminScreen,
 };
 
 // Screens that don't require a signed-in user.

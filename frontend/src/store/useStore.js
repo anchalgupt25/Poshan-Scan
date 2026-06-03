@@ -34,6 +34,7 @@ const useStore = create((set, get) => ({
   authToken: getAuthToken(),
   authEmail: getAuthEmail(),
   authChecked: false,
+  isAdmin: false,
 
   // 'signup' = new user setting up first child after OTP
   // 'signin' = returning user with existing profile(s); after OTP, go straight to home/kid-selector
@@ -43,6 +44,10 @@ const useStore = create((set, get) => ({
   setAuth: ({ token, email }) => {
     setAuthLocal(token, email);
     set({ authToken: token, authEmail: email, authChecked: true });
+    // Refresh /auth/me to learn whether this user is in ADMIN_EMAILS
+    fetchMe().then((me) => {
+      if (me?.authenticated) set({ isAdmin: !!me.is_admin });
+    }).catch(() => {});
   },
 
   logout: () => {
@@ -69,10 +74,10 @@ const useStore = create((set, get) => ({
     // Validate stored token with /auth/me — if rejected, clear
     const me = await fetchMe();
     if (me?.authenticated) {
-      set({ authChecked: true, authEmail: me.email });
+      set({ authChecked: true, authEmail: me.email, isAdmin: !!me.is_admin });
     } else {
       setAuthLocal(null, null);
-      set({ authChecked: true, authToken: null, authEmail: null });
+      set({ authChecked: true, authToken: null, authEmail: null, isAdmin: false });
     }
   },
 
