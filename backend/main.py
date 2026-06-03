@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .api.routes import auth, children, scan, nouri
+from .api.routes import admin, auth, children, scan, nouri
 
 load_dotenv()
 
@@ -56,6 +56,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(children.router)
 app.include_router(scan.router)
