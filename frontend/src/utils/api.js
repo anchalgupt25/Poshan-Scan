@@ -82,6 +82,29 @@ export async function fetchMe() {
   return r.json();
 }
 
+// ─── Admin (gated server-side by ADMIN_EMAILS allowlist) ───────────────────
+
+export async function adminStats() {
+  const r = await fetch(apiUrl('/admin/stats'), { headers: headers() });
+  return jsonOrThrow(r);
+}
+export async function adminUsers(limit = 100) {
+  const r = await fetch(apiUrl(`/admin/users?limit=${limit}`), { headers: headers() });
+  return jsonOrThrow(r);
+}
+export async function adminSignupsByDay() {
+  const r = await fetch(apiUrl('/admin/signups-by-day'), { headers: headers() });
+  return jsonOrThrow(r);
+}
+export async function adminScansByDay() {
+  const r = await fetch(apiUrl('/admin/scans-by-day'), { headers: headers() });
+  return jsonOrThrow(r);
+}
+export async function adminTopProducts(limit = 25) {
+  const r = await fetch(apiUrl(`/admin/top-products?limit=${limit}`), { headers: headers() });
+  return jsonOrThrow(r);
+}
+
 // ─── Children ──────────────────────────────────────────────────────────────
 
 export async function listChildren() {

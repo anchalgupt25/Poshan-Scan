@@ -25,3 +25,5 @@ logs/
 # IDE
 .vscode/
 .idea/
+*.mp4
+*.mov

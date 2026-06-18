@@ -1,16 +1,35 @@
-"""SQLite database setup using aiosqlite. Migrations-free for MVP."""
+"""Database layer with two pluggable backends:
+
+  • aiosqlite — local file SQLite for dev / first-run / offline mode.
+  • libsql_client — Turso (cloud SQLite-compatible) for production
+    persistence. Free forever, ~9GB storage, edge-replicated.
+
+The right backend is chosen at runtime from env vars:
+  TURSO_DATABASE_URL + TURSO_AUTH_TOKEN  →  Turso (cloud, persistent)
+  otherwise                              →  aiosqlite local file
+
+Schema is identical between the two — libsql IS SQLite, just synced.
+"""
 from __future__ import annotations
 
-import aiosqlite
 import json
+import logging
 import os
 from pathlib import Path
+from typing import Any, Iterable
 
-# DB path override via DB_PATH env var (used in production where the SQLite
-# file lives on a mounted persistent disk like /var/data on Render).
+logger = logging.getLogger(__name__)
+
+# ───────── Backend selection ─────────
+
+_TURSO_URL   = os.getenv("TURSO_DATABASE_URL", "").strip()
+_TURSO_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "").strip()
+USE_TURSO    = bool(_TURSO_URL and _TURSO_TOKEN)
+
 _default_db = Path(__file__).parent.parent / "poshan.sqlite"
 DB_PATH = Path(os.getenv("DB_PATH", str(_default_db)))
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+if not USE_TURSO:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS children (
@@ -51,7 +70,6 @@ CREATE TABLE IF NOT EXISTS scans (
     FOREIGN KEY (child_id) REFERENCES children(id)
 );
 
--- Email-OTP auth: minimal user record + short-lived OTP store
 CREATE TABLE IF NOT EXISTS auth_users (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -72,50 +90,184 @@ CREATE TABLE IF NOT EXISTS auth_otps (
 CREATE INDEX IF NOT EXISTS idx_auth_otps_email ON auth_otps(email);
 """
 
-
-# Additive migrations: add columns that didn't exist in older DB versions.
-# Using IF NOT EXISTS guard-style; SQLite doesn't support that for columns,
-# so we catch OperationalError (column already exists) gracefully.
+# Additive migrations — guard with try/except, both backends ignore "column exists"
 _ADDITIVE_MIGRATIONS = [
     "ALTER TABLE products_cache ADD COLUMN image_url TEXT",
 ]
 
-
-async def get_db() -> aiosqlite.Connection:
-    """Get a database connection. Use as a dependency in FastAPI routes."""
-    db = await aiosqlite.connect(DB_PATH)
-    db.row_factory = aiosqlite.Row
-    await db.executescript(CREATE_TABLES_SQL)
-    await db.commit()
-
-    # Run additive migrations — safe to run every startup
-    for migration in _ADDITIVE_MIGRATIONS:
-        try:
-            await db.execute(migration)
-            await db.commit()
-        except Exception:
-            pass  # Column already exists — that's fine
-
-    return db
+# Parse `CREATE TABLES SQL` into individual statements for Turso (which
+# doesn't have executescript). aiosqlite uses it as-is.
+def _split_statements(script: str) -> list[str]:
+    return [s.strip() for s in script.split(";") if s.strip()]
 
 
-async def fetch_one(db: aiosqlite.Connection, sql: str, params: tuple = ()) -> dict | None:
-    async with db.execute(sql, params) as cur:
-        row = await cur.fetchone()
-        return dict(row) if row else None
+# ═══════════════════════════════════════════════════════════════════════════
+#  Adapter pattern — both backends expose the same interface to route code:
+#    db = await get_db()
+#    row = await fetch_one(db, sql, params)
+#    rows = await fetch_all(db, sql, params)
+#    new_id = await execute(db, sql, params)
+#    await db.close()
+# ═══════════════════════════════════════════════════════════════════════════
 
 
-async def fetch_all(db: aiosqlite.Connection, sql: str, params: tuple = ()) -> list[dict]:
-    async with db.execute(sql, params) as cur:
-        rows = await cur.fetchall()
-        return [dict(r) for r in rows]
+class _TursoAdapter:
+    """Thin wrapper that mimics aiosqlite.Connection for route code.
+
+    Uses the async libsql Client directly — no sync-wrap-in-threadpool
+    indirection. The Client is a long-lived singleton; we DON'T close it
+    per-request (the route's try/finally just calls a no-op close).
+    """
+
+    def __init__(self, client):
+        self._client = client
+
+    async def execute_query(self, sql: str, params: Iterable = ()) -> list[dict]:
+        result = await self._client.execute(sql, list(params))
+        cols = result.columns
+        return [dict(zip(cols, row)) for row in result.rows]
+
+    async def execute_write(self, sql: str, params: Iterable = ()) -> int:
+        result = await self._client.execute(sql, list(params))
+        return result.last_insert_rowid or 0
+
+    async def executescript(self, script: str) -> None:
+        for stmt in _split_statements(script):
+            # Skip pure-comment chunks
+            if not any(line.strip() and not line.strip().startswith("--") for line in stmt.splitlines()):
+                continue
+            try:
+                await self._client.execute(stmt)
+            except Exception as e:
+                msg = str(e).lower()
+                if "already exists" in msg or "duplicate column" in msg:
+                    continue
+                raise
+
+    async def commit(self) -> None:
+        # Turso auto-commits each execute. No-op.
+        pass
+
+    async def close(self) -> None:
+        # Singleton client — don't close per-request.
+        pass
 
 
-async def execute(db: aiosqlite.Connection, sql: str, params: tuple = ()) -> int:
-    """Execute and commit, returning lastrowid."""
-    async with db.execute(sql, params) as cur:
-        await db.commit()
-        return cur.lastrowid or 0
+class _SqliteAdapter:
+    """Wrapper around aiosqlite.Connection with the same surface as _TursoAdapter."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    async def execute_query(self, sql: str, params: Iterable = ()) -> list[dict]:
+        async with self._conn.execute(sql, tuple(params)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+    async def execute_write(self, sql: str, params: Iterable = ()) -> int:
+        async with self._conn.execute(sql, tuple(params)) as cur:
+            await self._conn.commit()
+            return cur.lastrowid or 0
+
+    async def executescript(self, script: str) -> None:
+        await self._conn.executescript(script)
+        await self._conn.commit()
+        # Run additive migrations
+        for migration in _ADDITIVE_MIGRATIONS:
+            try:
+                await self._conn.execute(migration)
+                await self._conn.commit()
+            except Exception:
+                pass
+
+    async def commit(self) -> None:
+        await self._conn.commit()
+
+    async def close(self) -> None:
+        await self._conn.close()
+
+
+# Schema initialization runs once per process startup.
+_schema_initialized = False
+_turso_client = None
+
+
+async def _ensure_schema(adapter) -> None:
+    global _schema_initialized
+    if _schema_initialized:
+        return
+    await adapter.executescript(CREATE_TABLES_SQL)
+    if USE_TURSO:
+        # Run additive migrations against Turso too
+        for migration in _ADDITIVE_MIGRATIONS:
+            try:
+                await adapter.execute_write(migration)
+            except Exception:
+                pass
+    _schema_initialized = True
+    logger.info("DB schema initialized (backend=%s)", "turso" if USE_TURSO else "sqlite")
+
+
+def _normalize_turso_url(raw: str) -> str:
+    """Force HTTPS transport.
+
+    `libsql://...` defaults to WebSocket (Hrana). WebSockets are sometimes
+    blocked or flaky on shared hosting (Render free, Heroku, etc.). HTTPS
+    transport is universally reachable. Rewrite scheme to https:// so the
+    client uses the HTTP JSON API instead.
+    """
+    if raw.startswith("libsql://"):
+        return "https://" + raw[len("libsql://"):]
+    return raw
+
+
+async def get_db():
+    """Return a per-request DB adapter. Use as `db = await get_db()`."""
+    if USE_TURSO:
+        global _turso_client
+        if _turso_client is None:
+            import libsql_client
+            normalized = _normalize_turso_url(_TURSO_URL)
+            try:
+                _turso_client = libsql_client.create_client(
+                    url=normalized,
+                    auth_token=_TURSO_TOKEN,
+                )
+                logger.info("Turso client created (transport=https) for %s",
+                            normalized.split('@')[-1])
+            except Exception:
+                logger.exception("Failed to create Turso client (url=%s)", normalized)
+                raise
+        adapter = _TursoAdapter(_turso_client)
+    else:
+        import aiosqlite
+        conn = await aiosqlite.connect(DB_PATH)
+        conn.row_factory = aiosqlite.Row
+        adapter = _SqliteAdapter(conn)
+
+    try:
+        await _ensure_schema(adapter)
+    except Exception:
+        logger.exception("Schema initialization failed (backend=%s)",
+                         "turso" if USE_TURSO else "sqlite")
+        raise
+    return adapter
+
+
+# ───────── Public helpers used by routes ─────────
+
+
+async def fetch_one(db, sql: str, params: tuple = ()) -> dict | None:
+    rows = await db.execute_query(sql, params)
+    return rows[0] if rows else None
+
+
+async def fetch_all(db, sql: str, params: tuple = ()) -> list[dict]:
+    return await db.execute_query(sql, params)
+
+
+async def execute(db, sql: str, params: tuple = ()) -> int:
+    return await db.execute_write(sql, params)
 
 
 def decode_json_field(raw: str | None, default):

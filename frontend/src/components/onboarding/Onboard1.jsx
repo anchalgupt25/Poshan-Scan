@@ -3,41 +3,73 @@ import useStore from '../../store/useStore';
 import StatusBar from '../shared/StatusBar';
 import './onboarding.css';
 
-const nutrients = [
-  { emoji: '🧂', name: 'Sodium', desc: 'Hidden salt in packaged food' },
-  { emoji: '🍬', name: 'Added Sugar', desc: 'Not the fruit kind — the sneaky kind' },
-  { emoji: '🦴', name: 'Iron & Calcium', desc: 'Brain + bone builders' },
-  { emoji: '⚗️', name: 'Processing Level', desc: 'NOVA 1–4 classification' },
+const watchItems = [
+  {
+    emoji: '🍯',
+    name: 'Added sugar',
+    tag: 'Watch out',
+    tagClass: 'alert',
+    detail: 'AAP says zero added sugar under 2. We flag anything sneaky.',
+  },
+  {
+    emoji: '🧂',
+    name: 'Sodium',
+    tag: 'Watch out',
+    tagClass: 'alert',
+    detail: 'Most snacks blow past the daily limit in one serving.',
+  },
+  {
+    emoji: '🦴',
+    name: 'Iron',
+    tag: 'Look for',
+    tagClass: 'good',
+    detail: 'Critical for brain development — often missed in toddler diets.',
+  },
+  {
+    emoji: '⚗️',
+    name: 'Heavy metals',
+    tag: 'Watch out',
+    tagClass: 'alert',
+    detail: 'Lead, cadmium, arsenic in baby/toddler foods. We use HBBF testing data.',
+  },
 ];
 
 export default function Onboard1() {
   const navigate = useStore((s) => s.navigate);
+
   return (
     <div className="screen onboard-screen animate-fade-in">
       <StatusBar />
       <div className="onboard-header">
-        <div className="step-dots">
-          <div className="step-dot active" /><div className="step-dot" />
-          <div className="step-dot" /><div className="step-dot" />
+        <div className="onboard-progress">
+          <span className="active" /><span /><span /><span />
         </div>
-        <p className="onboard-step-label">Step 1 of 4 · What we look for</p>
-        <div className="onboard-question">Four things <em>most labels</em> hide</div>
-        <div className="onboard-sub">The science behind every score. Tap any to learn more.</div>
+        <p className="onboard-step-label">Step 1 of 4 · How Nouri works</p>
+        <div className="onboard-title">
+          Here's what Nouri <em>watches for</em> in every snack.
+        </div>
+        <div className="onboard-subtitle">
+          Backed by AAP and FDA guidance — these four are the difference-makers for little ones. We surface them in plain English so you don't have to decode labels.
+        </div>
       </div>
       <div className="onboard-body">
-        <div className="nutrient-grid">
-          {nutrients.map((n) => (
-            <div className="nutrient-card" key={n.name}>
-              <div className="n-emoji">{n.emoji}</div>
-              <div className="n-name">{n.name}</div>
-              <div className="n-desc">{n.desc}</div>
+        <div className="watch-grid">
+          {watchItems.map((w) => (
+            <div className="watch-card" key={w.name}>
+              <div className={`watch-tag ${w.tagClass}`}>{w.tag}</div>
+              <div className="watch-emoji">{w.emoji}</div>
+              <div className="watch-name">{w.name}</div>
+              <div className="watch-detail">{w.detail}</div>
             </div>
           ))}
         </div>
+        <p className="watch-footnote">
+          Plus your child's allergies and your family's eating style — you'll set those next.
+        </p>
       </div>
       <div className="onboard-bottom">
         <button className="btn-primary" onClick={() => navigate('onboard2')}>
-          Got it — let's set up →
+          Continue
         </button>
       </div>
     </div>

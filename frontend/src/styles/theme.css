@@ -32,15 +32,20 @@ html, body, #root { height: 100%; width: 100%; }
 
 body {
   font-family: var(--sans);
-  background: var(--cream);
+  /* Warm radial accents (terracotta top-left, sage bottom-right) on cream base */
+  background:
+    radial-gradient(circle at 10% 20%, rgba(216, 105, 74, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(127, 163, 114, 0.06) 0%, transparent 40%),
+    var(--cream);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
+/* Subtle paper-grain texture overlay matching the prototype */
 body::before {
   content: '';
   position: fixed; inset: 0;
-  pointer-events: none; opacity: 0.3; z-index: 0;
+  pointer-events: none; opacity: 0.4; z-index: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23  0 0 0 0 0.18  0 0 0 0 0.15  0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -55,18 +60,17 @@ a { text-decoration: none; color: inherit; }
 @keyframes splashRise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes logoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes scanLine {
-  0%,100% { top: 15%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  50% { top: 75%; }
-}
-@keyframes botPulse {
-  0%,100% { box-shadow: 0 4px 20px rgba(139, 58, 40, 0.25); }
-  50%     { box-shadow: 0 4px 30px rgba(139, 58, 40, 0.45); }
+  0%   { top: 0;     opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 180px; opacity: 0; }
 }
 @keyframes spinFwd { to { transform: rotate(360deg); } }
 @keyframes progressFill { from { width: 0%; } }
-@keyframes typing { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%           { transform: translateY(-4px); opacity: 1; }
+}
 @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .animate-fade-in { animation: fadeIn 0.5s ease both; }

@@ -36,6 +36,19 @@ def _allowed_invite_codes() -> set[str]:
     return {c.strip().upper() for c in raw.split(",") if c.strip()}
 
 
+def _persistent_known_emails() -> set[str]:
+    """Env-var-backed list of emails that are pre-approved to skip the invite
+    gate. Stopgap until the DB is on persistent storage (Render free tier wipes
+    SQLite on every redeploy). Operator updates KNOWN_USERS in the dashboard
+    as new beta testers sign up.
+
+    Format: comma-separated emails, case-insensitive.
+    Example:  KNOWN_USERS=anchalgupt25@gmail.com,test@example.com
+    """
+    raw = os.getenv("KNOWN_USERS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 
@@ -47,15 +60,38 @@ async def request_otp(request: Request) -> dict:
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Valid email is required.")
-    if not code:
-        raise HTTPException(status_code=400, detail="Invite code is required.")
-
-    allowed = _allowed_invite_codes()
-    if allowed and code not in allowed:
-        raise HTTPException(status_code=403, detail="That invite code isn't valid. Double-check or request one.")
 
     db = await get_db()
     try:
+        # Existing users (already registered with a valid invite code) can
+        # sign in with just email — no need to re-enter the invite code.
+        existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+
+        # Stopgap: also accept emails listed in KNOWN_USERS env var. This
+        # survives Render redeploys (ephemeral SQLite) so returning beta
+        # testers don't lose access just because the DB was wiped.
+        if not existing and email in _persistent_known_emails():
+            await execute(
+                db,
+                "INSERT INTO auth_users (email, invite_code) VALUES (?, ?)",
+                (email, "PRESEEDED"),
+            )
+            existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+
+        if not existing:
+            # New email — invite code is required and must be on the allowlist.
+            if not code:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invite code required for new accounts. If you signed up before, just enter your email.",
+                )
+            allowed = _allowed_invite_codes()
+            if allowed and code not in allowed:
+                raise HTTPException(
+                    status_code=403,
+                    detail="That invite code isn't valid. Double-check or request one.",
+                )
+
         # Rate-limit: max N OTP requests per email per hour
         recent = await fetch_one(
             db,
@@ -73,8 +109,7 @@ async def request_otp(request: Request) -> dict:
             (email, hash_otp(otp), expires_at),
         )
 
-        # Upsert the user record so we know who's been invited
-        existing = await fetch_one(db, "SELECT id FROM auth_users WHERE email = ?", (email,))
+        # Insert the user record on first signup so future visits skip the code
         if not existing:
             await execute(
                 db,
@@ -90,6 +125,7 @@ async def request_otp(request: Request) -> dict:
             "ok": True,
             "expires_in_minutes": _OTP_TTL_MINUTES,
             "delivery": "console" if info == "dev-console" else "email",
+            "is_returning_user": existing is not None,
         }
     finally:
         await db.close()
@@ -148,12 +184,21 @@ async def require_auth(authorization: Optional[str] = Header(default=None)) -> s
     return email
 
 
+def _admin_emails_set() -> set[str]:
+    raw = os.getenv("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
 @router.get("/me")
 async def whoami(authorization: Optional[str] = Header(default=None)) -> dict:
     email = _bearer_email(authorization)
     if not email:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    return {"email": email, "authenticated": True}
+    return {
+        "email": email,
+        "authenticated": True,
+        "is_admin": email.lower() in _admin_emails_set(),
+    }
 
 
 @router.post("/logout")

@@ -147,26 +147,49 @@ export default function ScanningScreen() {
         </div>
 
         <div className="scrollable" style={{ padding: '16px 24px 24px' }}>
-          <div className="scan-frame" style={{ margin: '8px auto 24px' }}>
-            <div className="scan-corners">
-              <div className="corner tl" /><div className="corner tr" />
-              <div className="corner bl" /><div className="corner br" />
+          <div className="scan-tip" style={{ marginBottom: 20 }}>
+            <div className="scan-tip-icon">🧪</div>
+            <div>
+              <strong>Camera barcode scanning is coming soon.</strong>
+              <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 4, lineHeight: 1.5 }}>
+                For now, type the UPC manually below — we'll look it up instantly across USDA + Open Food Facts.
+                For the most reliable scan today, use <strong>📷 Photograph the label</strong> from home.
+              </div>
             </div>
-            <div className="scan-line-anim" />
-            <div className="scan-hint">{method.desc}</div>
           </div>
 
+          {/* Removed the empty viewfinder — was a "white wall" that confused users.
+              Manual entry form below is now the primary affordance. */}
+
           <div className="section-label">ENTER BARCODE MANUALLY</div>
+
+          <div className="barcode-example">
+            <div className="barcode-example-title">Where to find the barcode</div>
+            <div className="barcode-visual">
+              <div className="barcode-bars">||||| || ||||| || ||| || |||||</div>
+              <div className="barcode-digits">
+                <span className="barcode-digit-edge">0</span>
+                <span>85239 07320</span>
+                <span className="barcode-digit-edge">9</span>
+              </div>
+            </div>
+            <div className="barcode-example-note">
+              Look on the back or side of the package. Type <strong>every digit</strong>{' '}
+              including the small numbers on the far left and far right — usually 12 digits in the US.
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               type="tel"
               inputMode="numeric"
               className="text-input"
-              placeholder="e.g. 028000010019"
+              placeholder="12-digit UPC, e.g. 028000010019"
               value={manualBarcode}
               onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
               disabled={status === 'looking'}
               style={{ flex: 1 }}
+              maxLength={14}
             />
             <button
               className="btn-primary"
@@ -176,6 +199,19 @@ export default function ScanningScreen() {
             >
               {status === 'looking' ? '…' : 'Look up'}
             </button>
+          </div>
+
+          <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 12 }}>
+            Try one of these to test: <button
+              type="button"
+              onClick={() => setManualBarcode('028000010019')}
+              style={{ background: 'var(--cream-deep)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'monospace', color: 'var(--ink)', border: 'none', cursor: 'pointer', marginRight: 4 }}
+            >028000010019</button> (Honey Nut Cheerios) ·{' '}
+            <button
+              type="button"
+              onClick={() => setManualBarcode('0085239073209')}
+              style={{ background: 'var(--cream-deep)', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'monospace', color: 'var(--ink)', border: 'none', cursor: 'pointer' }}
+            >0085239073209</button> (Goldfish)
           </div>
 
           {status === 'looking' && (
@@ -194,10 +230,6 @@ export default function ScanningScreen() {
               <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6 }}>{errorMsg}</div>
             </div>
           )}
-
-          <div className="scan-note" style={{ marginTop: 16 }}>
-            Live camera barcode reader is Phase 2. For now, type a real UPC barcode (e.g. <code>0085239073209</code> for Goldfish) and we'll fetch it live from Open Food Facts + USDA.
-          </div>
         </div>
       </div>
     );
@@ -221,12 +253,27 @@ export default function ScanningScreen() {
             <>
               <div className="photo-upload-area" onClick={() => fileInputRef.current?.click()}>
                 <div className="photo-upload-icon">📸</div>
-                <div className="photo-upload-title">Take or upload a photo</div>
+                <div className="photo-upload-title">Snap the nutrition label</div>
                 <div className="photo-upload-desc">
-                  Photograph the ingredients list or nutrition facts panel
+                  Aim the camera at the back of the package — the white Nutrition Facts panel and ingredients list.
                 </div>
-                <button className="btn-primary" style={{ marginTop: 16, maxWidth: 260 }}>
-                  Choose Photo
+                <button className="btn-primary" style={{ marginTop: 16, maxWidth: 280 }}>
+                  📷 Open camera
+                </button>
+                <button
+                  className="btn-ghost"
+                  style={{ marginTop: 8, maxWidth: 280 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                      // Restore capture so the next "Open camera" still works
+                      setTimeout(() => fileInputRef.current?.setAttribute('capture', 'environment'), 500);
+                    }
+                  }}
+                >
+                  Or upload from photos
                 </button>
               </div>
               <input
@@ -240,15 +287,13 @@ export default function ScanningScreen() {
               <div className="scan-tip">
                 <div className="scan-tip-icon">💡</div>
                 <div>
-                  <strong>Tips for best results:</strong>
+                  <strong>For best results:</strong>
                   <ul style={{ marginTop: 6, paddingLeft: 18, fontSize: 13, color: 'var(--ink-muted)' }}>
-                    <li>Good lighting, no glare</li>
-                    <li>Get the full panel in frame</li>
-                    <li>Hold steady for sharp focus</li>
+                    <li>Photograph the <strong>back of the package</strong>, not the front</li>
+                    <li>Good lighting, no glare on the label</li>
+                    <li>Fit the whole Nutrition Facts table in frame</li>
+                    <li>Hold steady so the text is sharp</li>
                   </ul>
-                  <div style={{ fontSize: 12, marginTop: 8, color: 'var(--ink-muted)' }}>
-                    Powered by Claude Vision when <code>ANTHROPIC_API_KEY</code> is set.
-                  </div>
                 </div>
               </div>
             </>
@@ -260,7 +305,7 @@ export default function ScanningScreen() {
                   <>
                     <div className="processing-spinner" />
                     <div>Reading nutrition label…</div>
-                    <div className="photo-status-sub">Claude Vision is parsing the panel</div>
+                    <div className="photo-status-sub">Extracting ingredients and nutrients — usually takes ~5 seconds</div>
                   </>
                 )}
                 {photoStatus === 'done' && (
@@ -320,6 +365,18 @@ export default function ScanningScreen() {
           <div className="link-desc">Amazon, Walmart, Target, Instacart — or just type a name</div>
         </div>
 
+        <div className="scan-tip" style={{ marginBottom: 16 }}>
+          <div className="scan-tip-icon">🧪</div>
+          <div>
+            <strong>This feature is still in beta.</strong>
+            <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 4, lineHeight: 1.5 }}>
+              Retailer site formats change often, so some links may not return a match.
+              If it doesn't work, try <strong>Enter Barcode</strong> (most reliable) or
+              <strong> Scan Label</strong> (camera + AI) — both are production-ready.
+            </div>
+          </div>
+        </div>
+
         <input
           className="text-input"
           type="text"
@@ -350,14 +407,26 @@ export default function ScanningScreen() {
         {status === 'notfound' && (
           <div className="lookup-error">
             <div style={{ fontSize: 28, marginBottom: 6 }}>🔍</div>
-            <strong>No match</strong>
+            <strong>Couldn't find this one</strong>
             <div style={{ fontSize: 13, color: 'var(--ink-muted)', marginTop: 6, lineHeight: 1.5, textAlign: 'left' }}>
               {errorMsg}
               <br /><br />
-              <strong style={{ color: 'var(--ink-soft)' }}>Try this:</strong>
-              <br />• Find the UPC barcode on the package
-              <br />• Open <strong>Scan Barcode</strong> and enter it manually
+              <strong style={{ color: 'var(--ink-soft)' }}>The other two scan modes are more reliable — try one of these:</strong>
             </div>
+            <button
+              className="btn-primary"
+              style={{ marginTop: 12, maxWidth: 280 }}
+              onClick={() => { useStore.getState().setScanMethod('barcode'); useStore.getState().navigate('scanning'); }}
+            >
+              🔢 Enter Barcode instead
+            </button>
+            <button
+              className="btn-ghost"
+              style={{ marginTop: 8, maxWidth: 280 }}
+              onClick={() => { useStore.getState().setScanMethod('photo'); useStore.getState().navigate('scanning'); }}
+            >
+              📷 Scan the nutrition label
+            </button>
           </div>
         )}
 
