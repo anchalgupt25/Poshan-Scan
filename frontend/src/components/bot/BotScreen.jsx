@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import AiDisclaimer from '../shared/AiDisclaimer';
 import useStore from '../../store/useStore';
 import StatusBar from '../shared/StatusBar';
 import { chatWithNouri } from '../../utils/api';
@@ -91,6 +92,10 @@ export default function BotScreen() {
           <div className="bot-header-status">here, no judgment</div>
         </div>
       </div>
+
+      {/* Nouri is Claude behind a narrow system prompt — say so, next to
+          the conversation rather than buried in settings. */}
+      <AiDisclaimer variant="banner" context="chat" />
 
       <div ref={scrollRef} className="bot-messages">
         {messages.map((m) => {

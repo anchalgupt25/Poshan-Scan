@@ -82,6 +82,23 @@ export async function fetchMe() {
   return r.json();
 }
 
+// What deleting the account would remove — shown on the confirm screen so the
+// user is told exactly what they're about to lose.
+export async function accountSummary() {
+  const r = await fetch(apiUrl('/auth/account/summary'), { headers: headers() });
+  return jsonOrThrow(r);
+}
+
+// Permanent account + data deletion. Required by App Store Guideline 5.1.1(v)
+// for any app that supports account creation.
+export async function deleteAccount() {
+  const r = await fetch(apiUrl('/auth/account'), {
+    method: 'DELETE',
+    headers: headers(),
+  });
+  return jsonOrThrow(r);
+}
+
 // ─── Admin (gated server-side by ADMIN_EMAILS allowlist) ───────────────────
 
 export async function adminStats() {

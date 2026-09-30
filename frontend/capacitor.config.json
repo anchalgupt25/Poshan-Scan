@@ -1,0 +1,32 @@
+{
+  "appId": "app.nouriscan",
+  "appName": "NouriScan",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#FDFBF7",
+    "scrollEnabled": true,
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 900,
+      "launchAutoHide": true,
+      "backgroundColor": "#FDFBF7",
+      "showSpinner": false,
+      "splashFullScreen": false,
+      "splashImmersive": false
+    },
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#FDFBF7",
+      "overlaysWebView": true
+    },
+    "Camera": {
+      "presentationStyle": "fullscreen"
+    },
+    "Preferences": {
+      "group": "NouriScanPrefs"
+    }
+  }
+}

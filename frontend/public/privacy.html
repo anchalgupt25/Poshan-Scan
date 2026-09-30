@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Policy — NouriScan</title>
+<meta name="description" content="How NouriScan collects, uses, and protects your data and your child's profile information.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:        #FBF6EE;
+    --cream-deep:   #F4E9D7;
+    --terracotta:   #D8694A;
+    --rust:         #8B3A28;
+    --sage:         #7FA372;
+    --ink:          #3A2E26;
+    --ink-soft:     #6A5A4E;
+    --ink-muted:    #9E8E7E;
+    --line:         #E8DCC4;
+    --white:        #FFFFFF;
+    --serif:        'Fraunces', Georgia, serif;
+    --sans:         'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    padding: 0 20px;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 56px 0 96px;
+  }
+
+  /* ─── Header ─── */
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 34px; }
+
+  .brand {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+    display: inline-block;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .brand em { font-style: italic; color: var(--terracotta); }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(30px, 6vw, 42px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin-bottom: 10px;
+  }
+
+  .updated {
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── Summary card ─── */
+  .summary {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 24px;
+    margin-bottom: 40px;
+  }
+  .summary-title {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .summary ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .summary li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .summary li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 9px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+  .summary li.no::before { background: var(--terracotta); }
+  .summary strong { color: var(--ink); font-weight: 600; }
+
+  /* ─── Sections ─── */
+  section { margin-bottom: 38px; }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--terracotta);
+    margin: 22px 0 8px;
+  }
+
+  p { margin-bottom: 13px; color: var(--ink-soft); }
+  p:last-child { margin-bottom: 0; }
+  strong { color: var(--ink); font-weight: 600; }
+
+  ul.body-list { margin: 0 0 14px 20px; color: var(--ink-soft); }
+  ul.body-list li { margin-bottom: 7px; padding-left: 3px; }
+  ul.body-list li::marker { color: var(--ink-muted); }
+
+  a { color: var(--rust); text-decoration: underline; text-underline-offset: 2px; }
+  a:hover { color: var(--terracotta); }
+  a:focus-visible { outline: 3px solid var(--terracotta); outline-offset: 2px; border-radius: 2px; }
+
+  /* ─── Tables ─── */
+  .table-wrap { overflow-x: auto; margin: 14px 0 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 460px; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding: 8px 12px 8px 0;
+    border-bottom: 2px solid var(--line);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 12px 11px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: var(--ink); font-weight: 600; }
+  /* Let the middle column absorb the slack — the outer two hold short phrases
+     that look broken when they wrap over three lines. */
+  th:first-child, td:first-child { width: 26%; }
+  th:last-child,  td:last-child  { width: 26%; }
+
+  /* ─── Callouts ─── */
+  .callout {
+    border-left: 3px solid var(--terracotta);
+    background: rgba(216, 105, 74, 0.06);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 18px;
+    margin: 16px 0;
+  }
+  .callout-title { font-weight: 700; color: var(--rust); margin-bottom: 5px; font-size: 15px; }
+  .callout p { margin-bottom: 0; font-size: 14.5px; }
+
+  .callout.sage { border-left-color: var(--sage); background: rgba(127, 163, 114, 0.08); }
+  .callout.sage .callout-title { color: #4F7046; }
+
+  /* ─── Contact ─── */
+  .contact-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 24px;
+  }
+  .contact-email {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 500;
+    word-break: break-word;
+  }
+  /* Override the body link colour here — at this size the terracotta reads as
+     the accent it is, and the underline would fight the serif. */
+  .contact-email a {
+    color: var(--terracotta);
+    text-decoration: none;
+  }
+  .contact-email a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  footer {
+    margin-top: 54px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <a class="brand" href="/">Nouri<em>Scan</em></a>
+    <h1>Privacy Policy</h1>
+    <div class="updated">Last updated 30 September 2026 · Version 1.0</div>
+  </header>
+
+  <div class="summary">
+    <div class="summary-title">The short version</div>
+    <ul>
+      <li>We collect <strong>your email</strong> to sign you in, and <strong>the child profile you create</strong> — age band, diet, allergens — because that's what the score is calculated against.</li>
+      <li>Label photos are <strong>read and then discarded.</strong> We never store the image.</li>
+      <li class="no">We <strong>do not</strong> sell your data, show ads, use analytics or advertising trackers, or track you across other apps and websites.</li>
+      <li>You can <strong>delete your account and everything in it</strong> from inside the app, at any time, permanently.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2>Who this covers</h2>
+    <p>
+      This policy applies to the NouriScan website at <strong>nouriscan.app</strong> and the
+      NouriScan iOS app. NouriScan is an independent project operated by its creator, not a
+      company. Throughout this policy, "we" means that operator and "you" means the adult
+      who created the account.
+    </p>
+    <p>
+      NouriScan helps a parent or caregiver read a packaged-food label faster by scoring it
+      against the profile of a specific child. It is intended for adults. It is not designed
+      for, marketed to, or intended to be used by children.
+    </p>
+  </section>
+
+  <section>
+    <h2>What we collect, and why</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>What</th><th>Why we need it</th><th>Kept?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Email address</td>
+            <td>Your account identity. We email you a one-time sign-in code — there is no password.</td>
+            <td>Until you delete your account</td>
+          </tr>
+          <tr>
+            <td>Invite code</td>
+            <td>NouriScan is a closed beta; we record which code an account signed up with.</td>
+            <td>Until you delete your account</td>
+          </tr>
+          <tr>
+            <td>Child profile</td>
+            <td>The name you enter, age band, gender, diet type, and allergens. The score is calculated from these — a food scored for a 7-month-old is scored differently than for a 5-year-old.</td>
+            <td>Until you delete it or your account</td>
+          </tr>
+          <tr>
+            <td>Scan history</td>
+            <td>The products you scanned, the score they received, and when. This is what powers your history list.</td>
+            <td>Until you delete your account</td>
+          </tr>
+          <tr>
+            <td>Nutrition label photos</td>
+            <td>Sent for text extraction so we can read the nutrients and ingredients.</td>
+            <td><strong>Not stored</strong> — see below</td>
+          </tr>
+          <tr>
+            <td>Questions you ask the assistant</td>
+            <td>Answering your question about the product on screen.</td>
+            <td>Not stored after the session</td>
+          </tr>
+          <tr>
+            <td>A random device identifier</td>
+            <td>A random string stored in your browser or app, used to associate data with your device before you sign in. It is not linked to any advertising identifier and cannot identify you personally.</td>
+            <td>Until you sign out or delete the app</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>What we never collect</h3>
+    <p>
+      No location data. No contacts. No device advertising identifier. No browsing history.
+      No payment information — NouriScan is currently free and has no payment processing of
+      any kind.
+    </p>
+  </section>
+
+  <section>
+    <h2>Your child's information</h2>
+
+    <div class="callout">
+      <div class="callout-title">Read this part</div>
+      <p>
+        NouriScan holds information <em>about</em> a child, provided <em>by</em> a parent or
+        caregiver. Because the age band, diet type, and allergen list describe a child's
+        health, we treat this as the most sensitive data in the product and handle it
+        accordingly.
+      </p>
+    </div>
+
+    <p>
+      <strong>We never collect information directly from children.</strong> The account holder
+      is an adult. Children do not sign in, create profiles, or interact with the app.
+      NouriScan is not directed to children under 13, and we do not knowingly allow a child
+      to create an account.
+    </p>
+
+    <p>
+      <strong>A real name is not required.</strong> The child's name exists only so you can
+      tell profiles apart when you have more than one. A first name, a nickname, or a single
+      initial all work exactly as well, and we'd encourage you to use one of those.
+    </p>
+
+    <p>
+      <strong>This information is never used for advertising or profiling.</strong> It is used
+      for one thing: calculating the score you asked for. It is not used to build a profile,
+      target anything at you, or train any model.
+    </p>
+
+    <p>
+      <strong>You can remove it at any time.</strong> Deleting a child profile removes it and
+      its scan history. Deleting your account removes everything.
+    </p>
+  </section>
+
+  <section>
+    <h2>Photos of nutrition labels</h2>
+    <p>
+      When you photograph a label, the image is sent to our scoring service, passed to
+      Anthropic's Claude Vision to extract the nutrition text, and then discarded.
+      <strong>We do not save the image to our database, and we do not save it to your
+      photo library.</strong> What we keep is the result: the product name, the nutrients
+      that were read, and the score.
+    </p>
+    <p>
+      Anthropic processes the image on our behalf as a service provider and does not use it
+      to train their models. Their handling is governed by
+      <a href="https://www.anthropic.com/legal/privacy" rel="noopener">Anthropic's privacy policy</a>.
+    </p>
+    <div class="callout sage">
+      <div class="callout-title">Practical tip</div>
+      <p>
+        Photograph only the label. If the packaging is in shot alongside something personal,
+        crop it first — the same as you would with any photo you send somewhere.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Who else sees your data</h2>
+    <p>
+      We use a small number of service providers to run NouriScan. Each one receives only
+      what it needs to do its job, and none of them are permitted to use your data for
+      their own purposes.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>What it receives</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Anthropic</td>
+            <td>Label photos; the product and child's age band and allergens when you ask the assistant a question</td>
+            <td>Reading labels and answering your questions</td>
+          </tr>
+          <tr>
+            <td>Resend</td>
+            <td>Your email address</td>
+            <td>Delivering your sign-in code</td>
+          </tr>
+          <tr>
+            <td>Turso</td>
+            <td>Your account, child profiles, and scan history</td>
+            <td>Database hosting</td>
+          </tr>
+          <tr>
+            <td>Render</td>
+            <td>Traffic to and from the app</td>
+            <td>Application hosting</td>
+          </tr>
+          <tr>
+            <td>Cloudflare</td>
+            <td>DNS requests for nouriscan.app</td>
+            <td>Domain routing</td>
+          </tr>
+          <tr>
+            <td>USDA FoodData Central, Open Food Facts</td>
+            <td>Only the barcode or product name being looked up — <strong>no personal information and nothing about your child</strong></td>
+            <td>Public nutrition databases</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>We do not sell your data</h3>
+    <p>
+      We have never sold or shared personal information for money or for cross-context
+      behavioural advertising, and we have no plans to. There are no advertising networks,
+      analytics SDKs, or third-party trackers in NouriScan.
+    </p>
+
+    <p>
+      We would disclose information if legally required to — a valid court order, for example
+      — or to protect someone's safety. If that ever happened and we were permitted to tell
+      you, we would.
+    </p>
+  </section>
+
+  <section>
+    <h2>How long we keep things</h2>
+    <p>
+      Your account, child profiles, and scan history are kept <strong>until you delete
+      them</strong>. We don't currently expire data automatically, because your scan history
+      is only useful to you if it's still there.
+    </p>
+    <p>
+      Sign-in codes expire after 10 minutes and are deleted when your account is deleted.
+      Label photos are never stored at all.
+    </p>
+  </section>
+
+  <section>
+    <h2>Deleting your data</h2>
+
+    <p>
+      <strong>In the app:</strong> Profile → Delete my account. You'll be shown exactly what
+      will be removed and asked to type DELETE to confirm.
+    </p>
+
+    <p>This permanently removes:</p>
+    <ul class="body-list">
+      <li>Your account and email address</li>
+      <li>Every child profile you created</li>
+      <li>Your entire scan history</li>
+      <li>Any outstanding sign-in codes</li>
+    </ul>
+
+    <div class="callout">
+      <div class="callout-title">There is no undo</div>
+      <p>
+        Deletion is immediate and permanent. There's no grace period and no backup we can
+        restore from. Because your email is removed entirely, you'd need a new invite code
+        to sign up again.
+      </p>
+    </div>
+
+    <p>
+      To delete a single child profile without closing your account, use Profile → select the
+      child → delete. You can also email us and we'll do any of this for you.
+    </p>
+
+    <h3>Your other rights</h3>
+    <p>
+      Depending on where you live, you may have the right to access a copy of your data,
+      correct it, or object to how it's used. Email us and we'll help — we won't charge you
+      or make it difficult. Most of it you can already see and edit directly in the app.
+    </p>
+  </section>
+
+  <section>
+    <h2>Security</h2>
+    <p>
+      All traffic between the app and our servers is encrypted with HTTPS. We don't store
+      passwords, because there aren't any — sign-in is a short-lived emailed code. Sign-in
+      sessions are cryptographically signed and expire after 30 days.
+    </p>
+    <p>
+      No system is perfectly secure, and it would be dishonest to claim otherwise. NouriScan
+      is a small independent project, not an enterprise with a security team. If you find a
+      vulnerability, please email us — we'd genuinely rather hear from you than not.
+    </p>
+  </section>
+
+  <section>
+    <h2>This is not medical advice</h2>
+    <p>
+      NouriScan provides nutrition information for educational purposes. Scores are derived
+      from public guidance including American Academy of Pediatrics intake references and
+      recommended dietary allowances, applied to the profile you entered. They are not a
+      medical assessment, and they cannot account for your child's medical history,
+      conditions, or your doctor's specific instructions.
+    </p>
+    <p>
+      Always read the actual packaging for allergens before feeding your child, especially
+      where an allergy is severe. Label data from public databases can be incomplete or out
+      of date. Talk to your pediatrician about your child's diet.
+    </p>
+  </section>
+
+  <section>
+    <h2>Changes to this policy</h2>
+    <p>
+      If we change this policy we'll update the date at the top. If a change materially
+      affects how we handle your information — a new category of data, or a new service
+      provider that receives it — we'll tell you in the app before it takes effect.
+    </p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <div class="contact-card">
+      <p style="margin-bottom:10px;">
+        Questions about this policy, your data, or anything else:
+      </p>
+      <div class="contact-email"><a href="mailto:aanchalG@nouriscan.app">aanchalG@nouriscan.app</a></div>
+      <p style="margin-top:12px;font-size:14px;">
+        We read everything and try to reply within a few days.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>NouriScan · nouriscan.app</span>
+    <span><a href="/">Back to the app</a></span>
+  </footer>
+
+</div>
+</body>
+</html>

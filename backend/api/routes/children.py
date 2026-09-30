@@ -1,4 +1,13 @@
-"""Child profile CRUD endpoints."""
+"""Child profile CRUD endpoints.
+
+Ownership: rows are matched on the signed-in email when available, falling back
+to the legacy per-browser session id for rows created before account linking
+existed. See api/routes/ownership.py for the rationale.
+
+Every by-id route verifies ownership before reading or writing. Child profiles
+contain a name, age band, and allergen list, so an unscoped id lookup would
+leak another family's health data.
+"""
 from __future__ import annotations
 
 import json
@@ -7,6 +16,7 @@ from typing import Optional
 
 from ...models.child import ChildProfileCreate, ChildProfile, ChildProfileUpdate
 from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_field
+from .ownership import resolve_owner
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -25,22 +35,38 @@ def _row_to_profile(row: dict) -> ChildProfile:
     )
 
 
+async def _owned_child_or_404(db, child_id: int, owner) -> dict:
+    """Fetch a child scoped to the caller. 404 (not 403) when not theirs, so we
+    don't confirm the existence of other families' records."""
+    pred, params = owner.where()
+    row = await fetch_one(
+        db,
+        f"SELECT * FROM children WHERE id = ? AND {pred}",
+        (child_id, *params),
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Child not found")
+    return row
+
+
 @router.post("/", response_model=ChildProfile, status_code=201)
 async def create_child(
     profile: ChildProfileCreate,
     x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
 ):
-    """Create a child profile. Session ID used as anonymous user identifier."""
-    session = x_session_id or "anonymous"
+    """Create a child profile, attributed to the signed-in account when present."""
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
         row_id = await execute(
             db,
             """INSERT INTO children
-               (user_session, name, age_band, gender, diet_type, allergies, goals, cuisine)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (user_session, user_email, name, age_band, gender, diet_type, allergies, goals, cuisine)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                session,
+                owner.write_session,
+                owner.write_email,
                 profile.name,
                 profile.age_band.value,
                 profile.gender.value,
@@ -57,24 +83,34 @@ async def create_child(
 
 
 @router.get("/{child_id}", response_model=ChildProfile)
-async def get_child(child_id: int, x_session_id: Optional[str] = Header(default=None)):
+async def get_child(
+    child_id: int,
+    x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
-        row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
-        if not row:
-            raise HTTPException(status_code=404, detail="Child not found")
-        return _row_to_profile(row)
+        return _row_to_profile(await _owned_child_or_404(db, child_id, owner))
     finally:
         await db.close()
 
 
 @router.get("/", response_model=list[ChildProfile])
-async def list_children(x_session_id: Optional[str] = Header(default=None)):
-    """List all children for the current session."""
-    session = x_session_id or "anonymous"
+async def list_children(
+    x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    """List the caller's children (account-linked, with legacy session fallback)."""
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
-        rows = await fetch_all(db, "SELECT * FROM children WHERE user_session = ?", (session,))
+        pred, params = owner.where()
+        rows = await fetch_all(
+            db,
+            f"SELECT * FROM children WHERE {pred} ORDER BY id",
+            tuple(params),
+        )
         return [_row_to_profile(r) for r in rows]
     finally:
         await db.close()
@@ -85,12 +121,12 @@ async def update_child(
     child_id: int,
     update: ChildProfileUpdate,
     x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
 ):
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
-        row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
-        if not row:
-            raise HTTPException(status_code=404, detail="Child not found")
+        row = await _owned_child_or_404(db, child_id, owner)
 
         fields = update.model_dump(exclude_none=True)
         if not fields:
@@ -115,10 +151,17 @@ async def update_child(
 
 
 @router.delete("/{child_id}", status_code=204)
-async def delete_child(child_id: int):
+async def delete_child(
+    child_id: int,
+    x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Delete one child profile and its scan history. Scoped to the caller."""
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
-        await execute(db, "DELETE FROM children WHERE id = ?", (child_id,))
+        await _owned_child_or_404(db, child_id, owner)
         await execute(db, "DELETE FROM scans WHERE child_id = ?", (child_id,))
+        await execute(db, "DELETE FROM children WHERE id = ?", (child_id,))
     finally:
         await db.close()

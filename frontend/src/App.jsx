@@ -13,6 +13,8 @@ import BotScreen from './components/bot/BotScreen';
 import ProfileScreen from './components/profile/ProfileScreen';
 import KidSelector from './components/profile/KidSelector';
 import AdminScreen from './components/admin/AdminScreen';
+import HealthDisclaimer from './components/shared/HealthDisclaimer';
+import { initNativeShell, rehydrateNativeStorage, isNative } from './utils/platform';
 
 const screens = {
   splash: SplashScreen,
@@ -43,8 +45,18 @@ export default function App() {
 
   // On mount: validate stored token (if any). If valid, fetch kids so the
   // returning user lands straight on home (or kid selector for multi-kid).
+  //
+  // On native we first rehydrate the session out of Capacitor Preferences,
+  // because iOS evicts WKWebView localStorage under storage pressure and that
+  // would otherwise sign the user out at random.
   useEffect(() => {
-    bootstrapAuth();
+    (async () => {
+      if (isNative()) {
+        await rehydrateNativeStorage(['nouri:auth-token', 'nouri:auth-email', 'nouri:session']);
+        initNativeShell();
+      }
+      bootstrapAuth();
+    })();
   }, [bootstrapAuth]);
 
   useEffect(() => {
@@ -77,6 +89,9 @@ export default function App() {
   return (
     <div className="app-shell">
       <Screen />
+      {/* One-time "guidance, not medical advice" gate. Required for App Store
+          review of a child-nutrition app, and honest besides. */}
+      <HealthDisclaimer />
     </div>
   );
 }

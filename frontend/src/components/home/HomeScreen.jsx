@@ -5,20 +5,23 @@ import BotFab from '../shared/BotFab';
 import { getScanHistory, scanBarcode } from '../../utils/api';
 import './home.css';
 
+// Barcode leads. It resolves to an exact product from a curated database,
+// which makes it both the fastest path and the most accurate one — photo OCR
+// has to read a label that may be creased, glared, or partly out of frame.
+// In the iOS app this opens a live camera scanner; on the web it's manual entry.
 const scanMethods = [
   {
-    id: 'photo',
+    id: 'barcode',
     primary: true,
     icon: '📷',
-    title: 'Photograph the label',
-    desc: 'Snap the back of the package — we read it instantly',
+    title: 'Scan the barcode',
+    desc: 'Fastest and most accurate — an exact match from the product database',
   },
   {
-    id: 'barcode',
-    icon: '🔢',
-    title: 'Enter barcode',
-    desc: 'Type the UPC manually — camera scan coming soon',
-    badge: 'BETA',
+    id: 'photo',
+    icon: '🏷️',
+    title: 'Photograph the label',
+    desc: 'No barcode, or not in our database? We read the label instead',
   },
   {
     id: 'link',

@@ -1,0 +1,200 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Live barcode scanner overlay.
+
+   The ML Kit plugin puts the camera feed BEHIND the webview, so for any of
+   this to be visible the page itself must be transparent. `nativeScan.js`
+   adds .barcode-scanning-active to <html> while a session is running, and the
+   rules below clear every opaque background in the stack.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+html.barcode-scanning-active,
+html.barcode-scanning-active body,
+html.barcode-scanning-active .app-shell,
+html.barcode-scanning-active .screen {
+  background: transparent !important;
+}
+
+/* Hide app chrome that would otherwise float over the camera. */
+html.barcode-scanning-active .nav-header,
+html.barcode-scanning-active .bottom-nav {
+  display: none !important;
+}
+
+.scanner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Transparent — the camera feed shows through from behind the webview. */
+  background: transparent;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── Dimmed surround ───
+   Two bands above and below the reticle rather than a single box-shadow, so
+   the cut-out stays crisp at every screen height. */
+.scanner-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(20, 16, 12, 0.62);
+  pointer-events: none;
+}
+.scanner-mask-top    { top: 0;    height: calc(50% - 95px); }
+.scanner-mask-bottom { bottom: 0; height: calc(50% - 95px); }
+
+/* ─── Reticle ─── */
+.scanner-reticle {
+  position: relative;
+  width: min(78vw, 300px);
+  height: 190px;
+  border-radius: 18px;
+  /* No fill — must stay clear so the camera is visible through it. */
+}
+
+.scanner-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #FDFBF7;
+  border-radius: 3px;
+}
+.scanner-corner.tl { top: 0;    left: 0;  border-right: none; border-bottom: none; border-top-left-radius: 16px; }
+.scanner-corner.tr { top: 0;    right: 0; border-left: none;  border-bottom: none; border-top-right-radius: 16px; }
+.scanner-corner.bl { bottom: 0; left: 0;  border-right: none; border-top: none;    border-bottom-left-radius: 16px; }
+.scanner-corner.br { bottom: 0; right: 0; border-left: none;  border-top: none;    border-bottom-right-radius: 16px; }
+
+/* Sweeping read-line — the one piece of motion, and it communicates
+   "actively scanning" rather than being decorative. */
+.scanner-sweep {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #E8704A, transparent);
+  box-shadow: 0 0 10px rgba(232, 112, 74, 0.85);
+  animation: scannerSweep 2.1s ease-in-out infinite;
+}
+
+@keyframes scannerSweep {
+  0%, 100% { top: 12px; opacity: 0.35; }
+  50%      { top: calc(100% - 14px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanner-sweep { animation: none; top: 50%; opacity: 0.8; }
+}
+
+/* ─── Chrome over the camera ─── */
+.scanner-topbar {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.scanner-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 16, 12, 0.55);
+  color: #FDFBF7;
+  font-size: 17px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.scanner-icon-btn.is-on { background: rgba(232, 112, 74, 0.9); }
+.scanner-icon-btn:focus-visible { outline: 3px solid #FDFBF7; outline-offset: 2px; }
+
+.scanner-hint {
+  position: absolute;
+  top: calc(50% + 120px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 0 28px;
+  pointer-events: none;
+}
+.scanner-hint-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FDFBF7;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  margin-bottom: 4px;
+}
+.scanner-hint-sub {
+  font-size: 13px;
+  color: rgba(253, 251, 247, 0.82);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  line-height: 1.4;
+}
+
+.scanner-bottombar {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.scanner-text-btn {
+  background: rgba(253, 251, 247, 0.16);
+  border: 1px solid rgba(253, 251, 247, 0.4);
+  color: #FDFBF7;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.scanner-text-btn:focus-visible { outline: 3px solid #FDFBF7; outline-offset: 2px; }
+
+/* ─── Permission / error fallback (opaque: no camera behind it) ─── */
+.scanner-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--cream, #FDFBF7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+
+.scanner-fallback-card {
+  max-width: 330px;
+  text-align: center;
+}
+.scanner-fallback-icon { font-size: 40px; margin-bottom: 12px; }
+.scanner-fallback-title {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 21px;
+  font-weight: 400;
+  color: var(--ink, #1A1714);
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+.scanner-fallback-body {
+  font-size: 14px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.55;
+  margin-bottom: 20px;
+}

@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useStore from '../../store/useStore';
 import StatusBar from '../shared/StatusBar';
+import DeleteAccount from './DeleteAccount';
+import { openExternal } from '../../utils/platform';
 
 export default function ProfileScreen() {
+  const [showDelete, setShowDelete] = useState(false);
   const navigate = useStore((s) => s.navigate);
   const kids = useStore((s) => s.kids);
   const activeKidId = useStore((s) => s.activeKidId);
@@ -11,6 +14,24 @@ export default function ProfileScreen() {
   const authEmail = useStore((s) => s.authEmail);
   const isAdmin = useStore((s) => s.isAdmin);
   const logout = useStore((s) => s.logout);
+
+  // Account deletion takes over the screen — it needs the user's full
+  // attention, and it must not be reachable by a stray tap.
+  if (showDelete) {
+    return (
+      <div className="screen animate-fade-in">
+        <StatusBar />
+        <div className="nav-header">
+          <button className="nav-back" onClick={() => setShowDelete(false)}>←</button>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>Delete account</div>
+          <div style={{ width: 40 }} />
+        </div>
+        <div className="scrollable" style={{ padding: '8px 24px 24px' }}>
+          <DeleteAccount onCancel={() => setShowDelete(false)} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="screen animate-fade-in">
@@ -81,10 +102,40 @@ export default function ProfileScreen() {
             <button
               className="btn-ghost"
               onClick={() => { if (confirm('Sign out of Nouri Scan?')) logout(); }}
-              style={{ marginTop: 10, color: 'var(--coral)' }}
+              style={{ marginTop: 10 }}
             >
               Sign out
             </button>
+
+            {/* Required by App Store Guideline 5.1.1(v): account deletion must
+                be reachable from inside the app. */}
+            <button
+              className="btn-ghost"
+              onClick={() => setShowDelete(true)}
+              style={{ marginTop: 10, color: 'var(--coral)', borderColor: 'rgba(232,112,74,0.4)' }}
+            >
+              Delete my account
+            </button>
+
+            <button
+              className="btn-ghost"
+              onClick={() => openExternal('https://nouriscan.app/privacy')}
+              style={{ marginTop: 10 }}
+            >
+              Privacy policy
+            </button>
+
+            <div style={{
+              marginTop: 20,
+              fontSize: 11,
+              color: 'var(--ink-muted)',
+              lineHeight: 1.5,
+              textAlign: 'center',
+            }}>
+              NouriScan provides nutrition information for educational purposes.
+              It is not medical advice — talk to your pediatrician about your
+              child's diet.
+            </div>
           </>
         )}
       </div>

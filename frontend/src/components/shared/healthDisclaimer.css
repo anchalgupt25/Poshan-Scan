@@ -1,0 +1,124 @@
+/* One-time health disclaimer sheet. Matches the app's cream/terracotta palette
+   rather than introducing a second visual language for a modal. */
+
+.hd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(26, 23, 20, 0.52);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: hdFade 0.22s ease;
+}
+
+.hd-sheet {
+  background: var(--cream, #FDFBF7);
+  width: 100%;
+  max-width: 420px;
+  border-radius: 22px 22px 0 0;
+  padding: 24px 22px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: hdRise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 -8px 32px rgba(26, 23, 20, 0.18);
+}
+
+@keyframes hdFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hdRise { from { transform: translateY(14px); } to { transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-backdrop, .hd-sheet { animation: none; }
+}
+
+.hd-mark {
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.hd-title {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink, #1A1714);
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+
+.hd-lede {
+  font-size: 15px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.hd-points {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.hd-points li {
+  font-size: 13.5px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.5;
+  padding-left: 14px;
+  position: relative;
+}
+
+.hd-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--terracotta, #E8704A);
+}
+
+.hd-points strong {
+  color: var(--ink, #1A1714);
+  font-weight: 700;
+}
+
+.hd-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--white, #FFF);
+  border: 1px solid var(--line, #E8DCC4);
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.45;
+}
+
+.hd-check input {
+  margin-top: 1px;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  accent-color: var(--terracotta, #E8704A);
+  cursor: pointer;
+}
+
+.hd-check input:focus-visible {
+  outline: 3px solid var(--terracotta, #E8704A);
+  outline-offset: 2px;
+}
+
+.hd-accept:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

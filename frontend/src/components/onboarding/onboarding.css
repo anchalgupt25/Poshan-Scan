@@ -217,3 +217,135 @@
 .nutrient-card .n-emoji { font-size: 32px; margin-bottom: 6px; }
 .nutrient-card .n-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 .nutrient-card .n-desc { font-size: 12px; color: var(--ink-muted); line-height: 1.3; }
+
+/* ─── Allergy step ─────────────────────────────────────────────────────────
+   The yes/no gate comes first so parents of children without allergies aren't
+   asked to parse fifteen chips on the profile's most safety-critical field. */
+
+.allergy-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.allergy-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 18px 12px;
+  background: var(--white);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+}
+.allergy-choice-btn:hover { border-color: var(--terracotta); }
+.allergy-choice-btn.selected {
+  border-color: var(--terracotta);
+  background: rgba(216, 105, 74, 0.07);
+}
+.allergy-choice-btn:focus-visible {
+  outline: 3px solid var(--terracotta);
+  outline-offset: 2px;
+}
+.allergy-choice-icon { font-size: 21px; line-height: 1; }
+.allergy-choice-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+/* ─── Allergen grid ─── */
+.allergen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.allergen-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 11px 12px;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.allergen-card:hover { border-color: var(--terracotta); }
+.allergen-card.selected {
+  border-color: var(--terracotta);
+  background: rgba(216, 105, 74, 0.08);
+}
+.allergen-card:focus-visible {
+  outline: 3px solid var(--terracotta);
+  outline-offset: 2px;
+}
+
+.allergen-card-emoji { font-size: 17px; line-height: 1.2; }
+.allergen-card-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+}
+/* The hidden-name hints are the point of this screen — they tell a parent
+   that "dairy" will also catch whey and ghee. */
+.allergen-card-note {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  line-height: 1.35;
+  font-style: italic;
+}
+.allergen-card-check {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: #FFF;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.allergy-hint {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  line-height: 1.45;
+  margin-top: 7px;
+  font-style: italic;
+}
+
+.allergy-note {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: rgba(244, 216, 154, 0.3);
+  border: 1px solid rgba(184, 83, 60, 0.22);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.allergy-note strong { color: var(--rust); }
+
+.allergy-gate-hint {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+  font-style: italic;
+}

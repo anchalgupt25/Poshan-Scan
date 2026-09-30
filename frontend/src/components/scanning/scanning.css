@@ -201,3 +201,32 @@ code {
 .result-card-info { flex: 1; min-width: 0; }
 .result-card-name { font-size: 15px; font-weight: 600; color: var(--ink); }
 .result-card-brand { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+/* ─── Native live-scan call to action ───
+   Shown in place of the web's "type the UPC" tip when running in the iOS app,
+   where a real ML Kit scanner is available. */
+.live-scan-cta {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 14px);
+  padding: 24px 20px;
+  text-align: center;
+}
+.live-scan-cta-icon {
+  font-size: 38px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.live-scan-cta-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.live-scan-cta-desc {
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  max-width: 34ch;
+  margin: 0 auto;
+}

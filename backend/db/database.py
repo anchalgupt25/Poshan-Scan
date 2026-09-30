@@ -93,6 +93,15 @@ CREATE INDEX IF NOT EXISTS idx_auth_otps_email ON auth_otps(email);
 # Additive migrations — guard with try/except, both backends ignore "column exists"
 _ADDITIVE_MIGRATIONS = [
     "ALTER TABLE products_cache ADD COLUMN image_url TEXT",
+    # Account-linked ownership. Historically children/scans were keyed only on
+    # user_session (a random localStorage id), which meant a reinstall or a new
+    # device orphaned the user's data and there was no way to find a given
+    # account's rows for deletion. These columns attach rows to the signed-in
+    # email; reads prefer email and fall back to user_session for legacy rows.
+    "ALTER TABLE children ADD COLUMN user_email TEXT",
+    "ALTER TABLE scans ADD COLUMN user_email TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_children_user_email ON children(user_email)",
+    "CREATE INDEX IF NOT EXISTS idx_scans_user_email ON scans(user_email)",
 ]
 
 # Parse `CREATE TABLES SQL` into individual statements for Turso (which

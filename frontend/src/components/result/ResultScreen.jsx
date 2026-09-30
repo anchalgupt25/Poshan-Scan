@@ -1,5 +1,7 @@
 import React from 'react';
 import useStore from '../../store/useStore';
+import AllergenBanner from './AllergenBanner';
+import AiDisclaimer from '../shared/AiDisclaimer';
 import BotFab from '../shared/BotFab';
 import './result.css';
 
@@ -236,6 +238,12 @@ export default function ResultScreen() {
         </div>
       </div>
 
+      {/* Allergen alert — sits above the verdict because a Grade A product
+          containing the child's allergen is still the wrong answer. */}
+      {!lowConfidence && (score?.allergen_alerts?.length > 0) && (
+        <AllergenBanner alerts={score.allergen_alerts} childName={childName} />
+      )}
+
       {/* Verdict band */}
       {!lowConfidence && (
         <div className={`verdict-band ${verdict.bucket}`}>
@@ -420,6 +428,9 @@ export default function ResultScreen() {
                 <div className="ingredients-box">{product.ingredients_text}</div>
               </>
             )}
+
+            {/* Generated-content notice — the insights above come from Claude. */}
+            <AiDisclaimer variant="banner" context="insights" />
 
             {/* Sources */}
             <div className="source-row">

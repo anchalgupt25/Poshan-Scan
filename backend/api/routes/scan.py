@@ -24,6 +24,7 @@ from ...db.database import get_db, fetch_one, fetch_all, execute, decode_json_fi
 from ...services.product_resolver import resolve_barcode, resolve_search, build_not_found_response
 from ...core.scoring.engine import score_product
 from ...models.child import ChildProfile
+from .ownership import resolve_owner
 
 router = APIRouter(prefix="/scan", tags=["scan"])
 
@@ -32,11 +33,24 @@ router = APIRouter(prefix="/scan", tags=["scan"])
 # Child helper — local to routes, reads only DB
 # ---------------------------------------------------------------------------
 
-async def _get_child(db, child_id: int | None) -> ChildProfile | None:
-    """Fetch child profile if child_id provided."""
+async def _get_child(db, child_id: int | None, owner=None) -> ChildProfile | None:
+    """Fetch a child profile, scoped to `owner` when one is supplied.
+
+    Scoping matters: the profile carries the child's name, age band and
+    allergen list, and it drives the score. Without the ownership predicate a
+    caller could score against — and read back — another family's profile.
+    """
     if not child_id:
         return None
-    row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
+    if owner is not None:
+        pred, params = owner.where()
+        row = await fetch_one(
+            db,
+            f"SELECT * FROM children WHERE id = ? AND {pred}",
+            (child_id, *params),
+        )
+    else:
+        row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
     if not row:
         return None
     return ChildProfile(
@@ -61,12 +75,14 @@ async def scan_barcode(
     barcode: str,
     child_id: Optional[int] = Query(default=None),
     x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
 ) -> dict:
     """Look up a barcode and score it for the given child profile.
 
     Resolution chain: cache → Open Food Facts → USDA FDC → demo fallback.
     Product is automatically cached after first live API hit.
     """
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
         product, source = await resolve_barcode(db, barcode)
@@ -74,7 +90,7 @@ async def scan_barcode(
         if not product:
             return build_not_found_response(barcode)
 
-        child = await _get_child(db, child_id)
+        child = await _get_child(db, child_id, owner)
         result = score_product(child, product) if child else None
 
         # Persist enough product metadata in the scan row so the home-screen
@@ -84,12 +100,18 @@ async def scan_barcode(
         scan_payload["product_name"] = product.name
         scan_payload["brand"] = product.brand or ""
 
-        session = x_session_id or "anonymous"
         await execute(
             db,
-            "INSERT INTO scans (user_session, child_id, barcode, scan_type, score_result) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (session, child_id, barcode, "barcode", json.dumps(scan_payload)),
+            "INSERT INTO scans (user_session, user_email, child_id, barcode, scan_type, score_result) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                owner.write_session,
+                owner.write_email,
+                child_id,
+                barcode,
+                "barcode",
+                json.dumps(scan_payload),
+            ),
         )
 
         return {
@@ -266,10 +288,38 @@ async def scan_ocr_image(request: Request) -> dict:
     has_ingredients = bool((parsed.get("ingredients") or "").strip())
     low_confidence  = nutrient_signal < 5 and not has_ingredients
 
+    owner = resolve_owner(
+        request.headers.get("authorization"),
+        request.headers.get("x-session-id"),
+    )
+
     db = await get_db()
     try:
-        child = await _get_child(db, child_id)
+        child = await _get_child(db, child_id, owner)
         result = score_product(child, product) if (child and not low_confidence) else None
+
+        # Record the scan so photo scans show up in history and in the admin
+        # image_uploads metric. Low-confidence attempts are deliberately still
+        # recorded (with a null score) — the rate at which the confidence gate
+        # fires is a signal worth keeping, not noise to discard.
+        scan_payload: dict = result.model_dump() if result else {}
+        scan_payload["product_name"] = product.name
+        scan_payload["brand"] = product.brand or ""
+        scan_payload["low_confidence"] = low_confidence
+
+        await execute(
+            db,
+            "INSERT INTO scans (user_session, user_email, child_id, barcode, scan_type, score_result) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                owner.write_session,
+                owner.write_email,
+                child_id,
+                None,
+                "photo-ocr",
+                json.dumps(scan_payload),
+            ),
+        )
     finally:
         await db.close()
 
@@ -290,6 +340,8 @@ async def scan_ocr_image(request: Request) -> dict:
 async def search_products(
     q: str = Query(..., min_length=2),
     child_id: Optional[int] = Query(default=None),
+    x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
 ) -> dict:
     """Product name search across Open Food Facts + USDA FDC.
 
@@ -306,9 +358,10 @@ async def search_products(
             "note": "No products found. Try a more specific name or barcode scan.",
         }
 
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
-        child = await _get_child(db, child_id)
+        child = await _get_child(db, child_id, owner)
         scores = [
             score_product(child, p).model_dump() if child else None
             for p in products
@@ -328,10 +381,20 @@ async def get_scan_history(
     child_id: int,
     limit: int = Query(default=20, le=100),
     x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
 ) -> list[dict]:
-    """Paginated scan history for a child."""
+    """Paginated scan history for a child, scoped to the caller.
+
+    Returns an empty list rather than 404 for a child that isn't the caller's,
+    so the endpoint doesn't confirm which child ids exist.
+    """
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
+        # Confirm the child belongs to the caller before returning its history.
+        if await _get_child(db, child_id, owner) is None:
+            return []
+
         rows = await fetch_all(
             db,
             "SELECT * FROM scans WHERE child_id = ? ORDER BY scanned_at DESC LIMIT ?",
@@ -353,12 +416,25 @@ async def get_scan_history(
 
 
 @router.patch("/history/{scan_id}/decision")
-async def log_decision(scan_id: int, decision: str = Query(...)) -> dict:
-    """Log parent's give/skip decision for a scan."""
+async def log_decision(
+    scan_id: int,
+    decision: str = Query(...),
+    x_session_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    """Log the parent's give/skip decision for one of their own scans."""
     if decision not in ("give", "skip", "undecided"):
         raise HTTPException(status_code=422, detail="Decision must be give, skip, or undecided")
+
+    owner = resolve_owner(authorization, x_session_id)
     db = await get_db()
     try:
+        pred, params = owner.where()
+        row = await fetch_one(
+            db, f"SELECT id FROM scans WHERE id = ? AND {pred}", (scan_id, *params)
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Scan not found")
         await execute(db, "UPDATE scans SET parent_decision = ? WHERE id = ?", (decision, scan_id))
         return {"ok": True}
     finally:

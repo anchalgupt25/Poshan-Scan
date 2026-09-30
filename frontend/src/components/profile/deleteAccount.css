@@ -1,0 +1,149 @@
+/* Account deletion. Uses the app's coral as the destructive colour rather than
+   a generic red, so it still reads as NouriScan — but at full saturation and
+   with a solid fill, which nothing else in the app does. */
+
+.da-wrap { padding-bottom: 8px; }
+
+.da-warn {
+  background: rgba(232, 112, 74, 0.08);
+  border: 1px solid rgba(232, 112, 74, 0.35);
+  border-radius: 12px;
+  padding: 14px 15px;
+}
+
+.da-warn-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--coral, #E8704A);
+  margin-bottom: 4px;
+}
+
+.da-warn-body {
+  font-size: 13px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.5;
+}
+
+.da-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--white, #FFF);
+  border: 1px solid var(--line, #E8DCC4);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.da-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line, #E8DCC4);
+  font-size: 13px;
+}
+
+.da-list li:last-child { border-bottom: none; }
+
+.da-list-label {
+  color: var(--ink-muted, #8B8078);
+  flex-shrink: 0;
+}
+
+.da-list-value {
+  color: var(--ink, #1A1714);
+  font-weight: 700;
+  text-align: right;
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+
+.da-note {
+  font-size: 12px;
+  color: var(--ink-muted, #8B8078);
+  line-height: 1.5;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.da-input {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.da-error {
+  background: rgba(232, 112, 74, 0.1);
+  border: 1px solid rgba(232, 112, 74, 0.4);
+  color: var(--coral, #E8704A);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 12px;
+}
+
+/* The one solid-coral button in the app — destructive actions should not look
+   like primary actions. */
+.da-delete-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px 18px;
+  border: none;
+  border-radius: 14px;
+  background: var(--coral, #E8704A);
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.da-delete-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.da-delete-btn:not(:disabled):active { opacity: 0.85; }
+
+.da-delete-btn:focus-visible {
+  outline: 3px solid var(--ink, #1A1714);
+  outline-offset: 2px;
+}
+
+/* ─── Post-deletion confirmation ─── */
+.da-done {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.da-done-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--sage, #7FA67F);
+  color: #FFF;
+  font-size: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.da-done-title {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--ink, #1A1714);
+  margin-bottom: 8px;
+}
+
+.da-done-body {
+  font-size: 14px;
+  color: var(--ink-soft, #5C544A);
+  line-height: 1.55;
+  max-width: 30ch;
+  margin: 0 auto;
+}

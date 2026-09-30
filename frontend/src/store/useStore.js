@@ -135,12 +135,23 @@ const useStore = create((set, get) => ({
     const dietKey  = (form.diets && form.diets[0]) || 'vegetarian';
     const diet_type = DIET_MAP[dietKey] || 'Pure Veg';
 
+    // Free-text allergens were previously collected by the onboarding screen
+    // and then silently dropped here, so anything a parent typed ("mustard",
+    // "kiwi") was never checked against a product. Split on commas, trim, and
+    // merge with the tapped chips.
+    const extraAllergens = (form.allergiesOther || '')
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const allergies = [...new Set([...(form.allergies || []), ...extraAllergens])];
+
     const profile = {
       name: form.name || 'My Child',
       age_band,
       gender,
       diet_type,
-      allergies: form.allergies || [],
+      allergies,
       goals: [],
       cuisine: form.dietNotes || null,
     };
@@ -190,6 +201,21 @@ const useStore = create((set, get) => ({
   onboardForm: { name: '', age: '', gender: '', allergies: [], allergiesOther: '', diets: [], dietNotes: '' },
   updateOnboardForm: (partial) =>
     set((s) => ({ onboardForm: { ...s.onboardForm, ...partial } })),
+
+  // Toggling must read the CURRENT list, not one captured at render time.
+  // Two taps landing in the same React batch would otherwise both start from
+  // the same stale array and the second would overwrite the first — silently
+  // dropping an allergen, on the one field where that is least acceptable.
+  toggleOnboardAllergen: (id) =>
+    set((s) => {
+      const cur = s.onboardForm.allergies || [];
+      return {
+        onboardForm: {
+          ...s.onboardForm,
+          allergies: cur.includes(id) ? cur.filter((a) => a !== id) : [...cur, id],
+        },
+      };
+    }),
   resetOnboardForm: () =>
     set({ onboardForm: { name: '', age: '', gender: '', allergies: [], allergiesOther: '', diets: [], dietNotes: '' } }),
 
@@ -227,5 +253,13 @@ const useStore = create((set, get) => ({
     }),
   clearBotMessages: () => set({ botMessages: [] }),
 }));
+
+// Dev-only handle so screens can be driven straight from the browser console
+// without walking the whole auth + onboarding flow. Stripped from production
+// builds by Vite's dead-code elimination, since import.meta.env.DEV is a
+// compile-time constant.
+if (import.meta.env.DEV) {
+  window.__NOURI_STORE__ = useStore;
+}
 
 export default useStore;

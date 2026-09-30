@@ -222,7 +222,7 @@ export default function AuthScreen() {
               ) : (
                 <>
                   No invite code? Ask whoever shared Nouri Scan with you, or email{' '}
-                  <a href="mailto:hello@nouriscan.app">hello@nouriscan.app</a>.
+                  <a href="mailto:aanchalG@nouriscan.app">aanchalG@nouriscan.app</a>.
                 </>
               )}
             </div>
