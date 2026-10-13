@@ -1,0 +1,58 @@
+/* Cold-start notice. Pinned to the top so it's visible whatever screen the
+   user is on, and sized to sit under the notch on iOS. */
+
+.waking-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 9px 16px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 9px);
+  background: var(--rust, #8B3A28);
+  color: #FDFBF7;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(58, 46, 38, 0.18);
+  animation: wakingDrop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes wakingDrop {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waking-banner { animation: none; }
+  .waking-spinner { animation: none; border-top-color: rgba(253, 251, 247, 0.9); }
+}
+
+.waking-spinner {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border: 2px solid rgba(253, 251, 247, 0.32);
+  border-top-color: #FDFBF7;
+  border-radius: 50%;
+  animation: wakingSpin 0.75s linear infinite;
+}
+
+@keyframes wakingSpin { to { transform: rotate(360deg); } }
+
+.waking-text {
+  min-width: 0;
+}
+
+/* Tabular so the ticking seconds don't make the text jitter. */
+.waking-elapsed {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+  font-weight: 500;
+  flex-shrink: 0;
+}

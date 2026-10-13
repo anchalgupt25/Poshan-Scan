@@ -14,6 +14,7 @@ import ProfileScreen from './components/profile/ProfileScreen';
 import KidSelector from './components/profile/KidSelector';
 import AdminScreen from './components/admin/AdminScreen';
 import HealthDisclaimer from './components/shared/HealthDisclaimer';
+import WakingBanner from './components/shared/WakingBanner';
 import { initNativeShell, rehydrateNativeStorage, isNative } from './utils/platform';
 
 const screens = {
@@ -69,7 +70,8 @@ export default function App() {
   if (!authChecked) {
     return (
       <div className="app-shell">
-        <div className="screen splash-screen">
+          <WakingBanner />
+      <div className="screen splash-screen">
           <div className="splash-content">
             <div className="splash-logo" style={{ animation: 'logoFloat 4s ease-in-out infinite' }}>🔬</div>
             <div className="splash-brand">Nouri<em>Scan</em></div>
@@ -89,6 +91,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Screen />
+      <WakingBanner />
       {/* One-time "guidance, not medical advice" gate. Required for App Store
           review of a child-nutrition app, and honest besides. */}
       <HealthDisclaimer />

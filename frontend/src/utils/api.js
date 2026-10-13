@@ -40,6 +40,79 @@ function headers(extra = {}) {
   return h;
 }
 
+/* ───────────────────── Cold-start handling ─────────────────────
+ *
+ * The API runs on Render's free tier, which puts the service to sleep after
+ * ~15 minutes idle. The next request then pays a cold start of roughly 30-50
+ * seconds while the container boots.
+ *
+ * Without feedback the app looks frozen and people assume it's broken — the
+ * single most common reason a first-time user bounces. So: any request still
+ * in flight after SLOW_AFTER_MS flips a flag that the UI shows a "waking up"
+ * notice for, and every request gets a generous abort timeout rather than
+ * hanging forever on a dead connection.
+ */
+
+const SLOW_AFTER_MS = 2500;
+// Must comfortably exceed a worst-case cold start, or we'd abort the very
+// request we're waiting on.
+const REQUEST_TIMEOUT_MS = 75000;
+
+const slowListeners = new Set();
+let inFlightSlow = 0;
+
+/** Subscribe to "a request is taking a while". Returns an unsubscribe fn. */
+export function onSlowRequest(fn) {
+  slowListeners.add(fn);
+  fn(inFlightSlow > 0);
+  return () => slowListeners.delete(fn);
+}
+
+function emitSlow() {
+  const isSlow = inFlightSlow > 0;
+  slowListeners.forEach((fn) => {
+    try { fn(isSlow); } catch (_) {}
+  });
+}
+
+/**
+ * fetch wrapper adding slow-request signalling and an abort timeout.
+ * Used for every call in this module.
+ */
+async function apiFetch(url, options = {}) {
+  const controller = new AbortController();
+  let markedSlow = false;
+
+  const slowTimer = setTimeout(() => {
+    markedSlow = true;
+    inFlightSlow += 1;
+    emitSlow();
+  }, SLOW_AFTER_MS);
+
+  const abortTimer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      const e = new Error(
+        "The server didn't respond in time. It may be waking up from sleep — " +
+        'wait a moment and try again.'
+      );
+      e.status = 504;
+      throw e;
+    }
+    throw err;
+  } finally {
+    clearTimeout(slowTimer);
+    clearTimeout(abortTimer);
+    if (markedSlow) {
+      inFlightSlow = Math.max(0, inFlightSlow - 1);
+      emitSlow();
+    }
+  }
+}
+
 async function jsonOrThrow(r) {
   if (!r.ok) {
     let msg = `Request failed (${r.status})`;
@@ -57,7 +130,7 @@ async function jsonOrThrow(r) {
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 export async function requestOtp(email, inviteCode) {
-  const r = await fetch(apiUrl('/auth/request-otp'), {
+  const r = await apiFetch(apiUrl('/auth/request-otp'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ email, invite_code: inviteCode }),
@@ -66,7 +139,7 @@ export async function requestOtp(email, inviteCode) {
 }
 
 export async function verifyOtp(email, code) {
-  const r = await fetch(apiUrl('/auth/verify-otp'), {
+  const r = await apiFetch(apiUrl('/auth/verify-otp'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ email, code }),
@@ -77,7 +150,7 @@ export async function verifyOtp(email, code) {
 export async function fetchMe() {
   const token = getAuthToken();
   if (!token) return null;
-  const r = await fetch(apiUrl('/auth/me'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/auth/me'), { headers: headers() });
   if (!r.ok) return null;
   return r.json();
 }
@@ -85,14 +158,14 @@ export async function fetchMe() {
 // What deleting the account would remove — shown on the confirm screen so the
 // user is told exactly what they're about to lose.
 export async function accountSummary() {
-  const r = await fetch(apiUrl('/auth/account/summary'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/auth/account/summary'), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 // Permanent account + data deletion. Required by App Store Guideline 5.1.1(v)
 // for any app that supports account creation.
 export async function deleteAccount() {
-  const r = await fetch(apiUrl('/auth/account'), {
+  const r = await apiFetch(apiUrl('/auth/account'), {
     method: 'DELETE',
     headers: headers(),
   });
@@ -102,36 +175,36 @@ export async function deleteAccount() {
 // ─── Admin (gated server-side by ADMIN_EMAILS allowlist) ───────────────────
 
 export async function adminStats() {
-  const r = await fetch(apiUrl('/admin/stats'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/admin/stats'), { headers: headers() });
   return jsonOrThrow(r);
 }
 export async function adminUsers(limit = 100) {
-  const r = await fetch(apiUrl(`/admin/users?limit=${limit}`), { headers: headers() });
+  const r = await apiFetch(apiUrl(`/admin/users?limit=${limit}`), { headers: headers() });
   return jsonOrThrow(r);
 }
 export async function adminSignupsByDay() {
-  const r = await fetch(apiUrl('/admin/signups-by-day'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/admin/signups-by-day'), { headers: headers() });
   return jsonOrThrow(r);
 }
 export async function adminScansByDay() {
-  const r = await fetch(apiUrl('/admin/scans-by-day'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/admin/scans-by-day'), { headers: headers() });
   return jsonOrThrow(r);
 }
 export async function adminTopProducts(limit = 25) {
-  const r = await fetch(apiUrl(`/admin/top-products?limit=${limit}`), { headers: headers() });
+  const r = await apiFetch(apiUrl(`/admin/top-products?limit=${limit}`), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 // ─── Children ──────────────────────────────────────────────────────────────
 
 export async function listChildren() {
-  const r = await fetch(apiUrl('/children/'), { headers: headers() });
+  const r = await apiFetch(apiUrl('/children/'), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 export async function createChild(profile) {
   // profile: { name, age_band, gender, diet_type, allergies: [], goals: [], cuisine?: '' }
-  const r = await fetch(apiUrl('/children/'), {
+  const r = await apiFetch(apiUrl('/children/'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(profile),
@@ -157,7 +230,7 @@ export async function searchProducts(query, childId) {
 
 export async function ocrLabelImage(imageDataUrl, childId) {
   const mime = (imageDataUrl.match(/^data:([^;]+);/) || [, 'image/jpeg'])[1];
-  const r = await fetch(apiUrl('/scan/ocr-image'), {
+  const r = await apiFetch(apiUrl('/scan/ocr-image'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({
@@ -170,14 +243,14 @@ export async function ocrLabelImage(imageDataUrl, childId) {
 }
 
 export async function getScanHistory(childId, limit = 10) {
-  const r = await fetch(apiUrl(`/scan/history/${childId}?limit=${limit}`), { headers: headers() });
+  const r = await apiFetch(apiUrl(`/scan/history/${childId}?limit=${limit}`), { headers: headers() });
   return jsonOrThrow(r);
 }
 
 // ─── Nouri Bot ─────────────────────────────────────────────────────────────
 
 export async function chatWithNouri({ message, context = 'result', childId, scanData, history = [] }) {
-  const r = await fetch(apiUrl('/nouri/chat'), {
+  const r = await apiFetch(apiUrl('/nouri/chat'), {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({
