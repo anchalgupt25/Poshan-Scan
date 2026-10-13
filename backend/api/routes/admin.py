@@ -123,19 +123,38 @@ async def list_users(
     try:
         rows = await fetch_all(
             db,
+            # Correlated subqueries rather than JOINs. Joining both children and
+            # scans in one query produces a cartesian product, which COUNT(DISTINCT)
+            # survives but SUM(CASE...) does not — image_uploads would be multiplied
+            # by the user's number of children.
+            #
+            # Attribution is on user_email. The old join compared user_session to
+            # u.email, but user_session holds a random per-browser id, so it never
+            # matched and every column read 0. Rows created before account linking
+            # existed have user_email NULL and cannot be attributed to anyone —
+            # that history is genuinely unrecoverable, so those users show 0 until
+            # they next use the app.
             """SELECT u.id,
                       u.email,
                       u.invite_code,
                       u.created_at,
                       u.last_login_at,
-                      COUNT(DISTINCT c.id) AS kids,
-                      COUNT(DISTINCT s.id) AS total_scans,
-                      COUNT(DISTINCT s.barcode) AS unique_scans,
-                      SUM(CASE WHEN s.scan_type IN ('ocr_label', 'photo-ocr', 'photo') THEN 1 ELSE 0 END) AS image_uploads
+                      (SELECT COUNT(*) FROM children c
+                        WHERE c.user_email = u.email) AS kids,
+                      (SELECT COUNT(*) FROM scans s
+                        WHERE s.user_email = u.email) AS total_scans,
+                      -- COUNT(DISTINCT barcode) alone undercounts: photo scans
+                      -- carry no barcode, and COUNT(DISTINCT) skips NULLs, so
+                      -- every OCR scan was invisible here. Count distinct
+                      -- barcodes plus each barcode-less scan on its own.
+                      (SELECT COUNT(DISTINCT s.barcode) FROM scans s
+                        WHERE s.user_email = u.email AND s.barcode IS NOT NULL)
+                      + (SELECT COUNT(*) FROM scans s
+                          WHERE s.user_email = u.email AND s.barcode IS NULL) AS unique_scans,
+                      (SELECT COUNT(*) FROM scans s
+                        WHERE s.user_email = u.email
+                          AND s.scan_type IN ('ocr_label', 'photo-ocr', 'photo')) AS image_uploads
                  FROM auth_users u
-                 LEFT JOIN children c ON c.user_session = u.email
-                 LEFT JOIN scans    s ON s.user_session = u.email
-                 GROUP BY u.id, u.email, u.invite_code, u.created_at, u.last_login_at
                  ORDER BY COALESCE(u.last_login_at, u.created_at) DESC
                  LIMIT ?""",
             (limit,),
