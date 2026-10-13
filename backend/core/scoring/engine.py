@@ -12,9 +12,12 @@ Weights (from scoring-rules.json philosophy):
 from __future__ import annotations
 
 from ..data.loader import get_age_band, load_watchlist
+from .allergens import detect as detect_allergens
 from ...models.product import Product, NutritionFacts
 from ...models.child import ChildProfile
-from ...models.score import Grade, GRADE_LABELS, ScoreDimensions, ScoreResult, IngredientFlag
+from ...models.score import (
+    Grade, GRADE_LABELS, ScoreDimensions, ScoreResult, IngredientFlag, AllergenAlert,
+)
 from .dimensions import (
     clamp, score_nutrition, score_ingredients, score_processing, score_age_safety,
 )
@@ -137,18 +140,46 @@ def score_product(child: ChildProfile, product: Product) -> ScoreResult:
     band = get_age_band(child.age_band.value)
     facts: NutritionFacts = product.nutrition
 
-    # Check allergy flags
+    # ─── Allergens ───
+    # Uses the ontology in allergens.py rather than a substring match, so
+    # "dairy" catches whey and casein, "egg" no longer matches eggplant, and
+    # Open Food Facts' curated tags are preferred over parsed ingredient text.
+    allergen_hits = detect_allergens(
+        child.allergies,
+        product.ingredients_text,
+        product.allergens_tags,
+        product.traces_tags,
+    )
+
     allergy_flags: list[IngredientFlag] = []
-    if product.ingredients_text:
-        for allergy in child.allergies:
-            if allergy.lower() in (product.ingredients_text or "").lower():
-                allergy_flags.append(IngredientFlag(
-                    severity="red",
-                    code="allergen_match",
-                    title=f"Contains {allergy} (Allergy Alert)",
-                    detail=f"This product may contain {allergy}, which is listed as an allergy for {child.name}.",
-                    source_citation=None,
-                ))
+    for hit in allergen_hits:
+        definite = hit.certainty == "contains"
+        if definite:
+            title = f"Contains {hit.label}"
+            detail = (
+                f"{child.name} is allergic to {hit.label.lower()}, and this "
+                f"product contains it. Check the package before serving."
+            )
+        else:
+            title = f"May contain {hit.label}"
+            detail = (
+                f"This product doesn't list {hit.label.lower()} as an "
+                f"ingredient, but the label warns it may be present through "
+                f"shared equipment or facilities. {child.name} is allergic to it."
+            )
+        if hit.matched_terms:
+            detail += f" Found on the label as: {', '.join(hit.matched_terms)}."
+
+        allergy_flags.append(IngredientFlag(
+            severity="red" if definite else "amber",
+            code="allergen_match" if definite else "allergen_trace",
+            title=title,
+            detail=detail,
+            source_citation=(
+                "Open Food Facts allergen data"
+                if hit.source == "off_tag" else "Product ingredient list"
+            ),
+        ))
 
     # Watchlist scan
     watchlist_flags = _check_watchlist(product.ingredients_text or "", child)
@@ -190,5 +221,15 @@ def score_product(child: ChildProfile, product: Product) -> ScoreResult:
         ),
         flags=ingredient_flags,
         nutrient_insights=all_insights,
+        allergen_alerts=[
+            AllergenAlert(
+                allergen_id=h.allergen_id,
+                label=h.label,
+                certainty=h.certainty,
+                source=h.source,
+                matched_terms=h.matched_terms,
+            )
+            for h in allergen_hits
+        ],
         verdict_text=_build_verdict_text(overall, grade, child, product),
     )

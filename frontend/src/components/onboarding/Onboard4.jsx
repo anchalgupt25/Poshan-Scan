@@ -4,9 +4,14 @@ import StatusBar from '../shared/StatusBar';
 import './onboarding.css';
 
 const diets = [
-  { id: 'vegetarian',     label: 'Pure Veg' },
-  { id: 'veg-eggs',       label: 'Veg + Eggs' },
+  { id: 'vegetarian',     label: 'Vegetarian' },
+  { id: 'vegan',          label: 'Strict vegan' },
   { id: 'jain',           label: 'Jain' },
+  { id: 'halal',          label: 'Halal' },
+  { id: 'kosher',         label: 'Kosher' },
+  { id: 'no-pork',        label: 'No pork' },
+  { id: 'no-honey',       label: 'No honey' },
+  { id: 'no-added-sugar', label: 'Low added sugar' },
 ];
 
 export default function Onboard4() {
@@ -18,9 +23,9 @@ export default function Onboard4() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const toggle = (id) => {
-    // Diet type on backend is single-value; treat as radio
-    updateForm({ diets: [id] });
+  const toggleDiet = (id) => {
+    const cur = form.diets || [];
+    updateForm({ diets: cur.includes(id) ? cur.filter((d) => d !== id) : [...cur, id] });
   };
 
   const handleFinish = async () => {
@@ -41,26 +46,27 @@ export default function Onboard4() {
     <div className="screen onboard-screen animate-fade-in">
       <StatusBar />
       <div className="onboard-header">
-        <div className="step-dots">
-          <div className="step-dot done" /><div className="step-dot done" />
-          <div className="step-dot done" /><div className="step-dot active" />
+        <div className="onboard-progress">
+          <span className="done" /><span className="done" /><span className="done" /><span className="active" />
         </div>
         <p className="onboard-step-label">Step 4 of 4 · Your family's plate</p>
-        <div className="onboard-question">How does your <em>family</em> eat?</div>
-        <div className="onboard-sub">
-          Pick one. We'll spot ingredients that don't fit — including sneaky ones like rennet, gelatin, and carmine.
+        <div className="onboard-title">
+          How does your <em>family</em> eat?
+        </div>
+        <div className="onboard-subtitle">
+          Pick any that apply. We'll spot ingredients that don't fit — including the sneaky ones like rennet, gelatin, and carmine.
         </div>
       </div>
       <div className="onboard-body">
         <div className="dietary-info-banner">
           ✨ Most apps stop at "vegetarian." We go further — including Jain, halal, kosher, and strict-vegan rules that most labels don't surface.
         </div>
-        <div className="chip-row" style={{ marginTop: 16 }}>
+        <div className="chip-row">
           {diets.map((d) => (
             <div
               key={d.id}
               className={`chip chip-restriction ${(form.diets || []).includes(d.id) ? 'selected' : ''}`}
-              onClick={() => toggle(d.id)}
+              onClick={() => toggleDiet(d.id)}
             >
               {d.label}
             </div>
@@ -69,9 +75,6 @@ export default function Onboard4() {
         <label className="onboard-label" style={{ marginTop: 22 }}>
           Anything else you'd like Nouri to keep an eye on?
         </label>
-        <p style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 8 }}>
-          Optional — type whatever matters to you.
-        </p>
         <input
           type="text"
           className="text-input"
@@ -87,7 +90,7 @@ export default function Onboard4() {
       </div>
       <div className="onboard-bottom">
         <button className="btn-primary" onClick={handleFinish} disabled={saving}>
-          {saving ? 'Saving…' : '✓ All set — start scanning'}
+          {saving ? 'Saving…' : 'All set'}
         </button>
       </div>
     </div>

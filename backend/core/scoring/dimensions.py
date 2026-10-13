@@ -67,7 +67,32 @@ def score_nutrition(facts: NutritionFacts, band: AgeBandConfig) -> tuple[int, li
         status="good" if calcium_pct >= 10 else "neutral",
     ))
 
-    # — Zinc —
+    # — Protein —
+    # Pediatric RDA ranges: 11g (6-12mo) → 13g (1-3y) → 19g (4-6y) → 24g (9-13y).
+    # Per-serving "good" = ≥3g (toddler) or ≥5g (older child).
+    protein_daily = getattr(band, "protein_g_daily_rda", None) or 13.0
+    protein_pct = round((facts.protein_g / protein_daily) * 100) if protein_daily else 0
+    insights.append(NutrientInsight(
+        name="Protein",
+        value=f"{facts.protein_g:.1f}",
+        unit="g",
+        pct_of_daily=protein_pct,
+        status="good" if facts.protein_g >= 3 else
+               "caution" if facts.protein_g > 0 else "neutral",
+    ))
+
+    # — Fiber —
+    fiber_daily = getattr(band, "fiber_g_daily_ai", None) or 19.0
+    fiber_pct = round((facts.fiber_g / fiber_daily) * 100) if fiber_daily else 0
+    insights.append(NutrientInsight(
+        name="Fiber",
+        value=f"{facts.fiber_g:.1f}",
+        unit="g",
+        pct_of_daily=fiber_pct,
+        status="good" if facts.fiber_g >= 2 else "neutral",
+    ))
+
+    # — Zinc — kept for backwards compatibility but no longer in top-4
     zinc_daily = band.zinc_mg_daily_rda or 3.0
     zinc_pct = round((facts.zinc_mg / zinc_daily) * 100) if zinc_daily else 0
     insights.append(NutrientInsight(

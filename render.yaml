@@ -52,6 +52,25 @@ services:
         value: "10"
       - key: OTP_MAX_PER_HOUR
         value: "5"
+      # Persistent database (Turso). Set both in the dashboard.
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      # Emails that see the in-app analytics dashboard.
+      - key: ADMIN_EMAILS
+        sync: false
+      # Emails that skip the invite gate on sign-in (safety net for returning
+      # beta testers after an infrastructure event).
+      - key: KNOWN_USERS
+        sync: false
+      # App Store review bypass — REVIEW_EMAIL skips the invite gate and
+      # accepts REVIEW_OTP directly instead of emailing a code. Both must be
+      # set for it to activate. UNSET BOTH once the app is approved.
+      - key: REVIEW_EMAIL
+        sync: false
+      - key: REVIEW_OTP
+        sync: false
 
   # ── Frontend: React static site (always free, global CDN) ──────────────
   - type: web
@@ -61,8 +80,16 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     autoDeploy: true
-    # SPA routing — every path serves index.html (React handles client-side routing)
+    # Routes are evaluated in order. The privacy policy is a standalone static
+    # page, so it must be matched BEFORE the SPA catch-all below — otherwise
+    # /privacy gets rewritten to index.html and serves the React app instead.
+    # App Store Connect and the app's own footer both point at /privacy.
     routes:
+      - type: rewrite
+        source: /privacy
+        destination: /privacy.html
+      # SPA routing — every remaining path serves index.html (React handles
+      # client-side routing)
       - type: rewrite
         source: /*
         destination: /index.html

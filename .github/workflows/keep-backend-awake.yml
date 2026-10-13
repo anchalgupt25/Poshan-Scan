@@ -1,0 +1,46 @@
+name: Keep backend awake
+
+# The API runs on Render's free tier, which sleeps after ~15 minutes idle.
+# The next visitor then waits 30-50 seconds for a cold start, which in practice
+# reads as "the app is broken" and is the most common reason a first-time user
+# gives up before ever seeing a score.
+#
+# Pinging /health every 10 minutes keeps the container warm, so real users get
+# the ~200ms response instead of the cold start.
+#
+# Caveats worth knowing:
+#   * GitHub disables scheduled workflows after 60 days with no repo activity.
+#     If cold starts come back, check whether this workflow was auto-disabled.
+#   * Scheduled runs are best-effort and can be delayed several minutes under
+#     load, so treat this as "mostly warm", not a guarantee.
+#   * The real fix is Render's Starter plan (~$7/mo), which never sleeps. This
+#     is the free approximation.
+
+on:
+  schedule:
+    # Every 10 minutes — comfortably inside Render's ~15 minute idle window.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # lets you trigger it by hand from the Actions tab
+
+concurrency:
+  group: keep-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        run: |
+          # --max-time 90 because a cold start legitimately takes ~30-50s and
+          # we would rather wait than report a false failure.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 \
+            https://nouri-scan-api.onrender.com/health || echo "000")
+          echo "health endpoint returned: $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Backend health check returned $code (expected 200)"
+          fi
+          # Deliberately does not fail the job on a bad response: a transient
+          # blip would otherwise spam failure emails every 10 minutes. The
+          # warning is enough to spot a real outage in the Actions tab.

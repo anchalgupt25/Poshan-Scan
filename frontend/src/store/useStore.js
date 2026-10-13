@@ -34,10 +34,20 @@ const useStore = create((set, get) => ({
   authToken: getAuthToken(),
   authEmail: getAuthEmail(),
   authChecked: false,
+  isAdmin: false,
+
+  // 'signup' = new user setting up first child after OTP
+  // 'signin' = returning user with existing profile(s); after OTP, go straight to home/kid-selector
+  authIntent: 'signup',
+  setAuthIntent: (intent) => set({ authIntent: intent }),
 
   setAuth: ({ token, email }) => {
     setAuthLocal(token, email);
     set({ authToken: token, authEmail: email, authChecked: true });
+    // Refresh /auth/me to learn whether this user is in ADMIN_EMAILS
+    fetchMe().then((me) => {
+      if (me?.authenticated) set({ isAdmin: !!me.is_admin });
+    }).catch(() => {});
   },
 
   logout: () => {
@@ -64,10 +74,10 @@ const useStore = create((set, get) => ({
     // Validate stored token with /auth/me — if rejected, clear
     const me = await fetchMe();
     if (me?.authenticated) {
-      set({ authChecked: true, authEmail: me.email });
+      set({ authChecked: true, authEmail: me.email, isAdmin: !!me.is_admin });
     } else {
       setAuthLocal(null, null);
-      set({ authChecked: true, authToken: null, authEmail: null });
+      set({ authChecked: true, authToken: null, authEmail: null, isAdmin: false });
     }
   },
 
@@ -83,7 +93,7 @@ const useStore = create((set, get) => ({
   hasMultipleKids: false,
   isOnboarded: false,
 
-  loadKidsFromServer: async () => {
+  loadKidsFromServer: async ({ navigateOnLoad = true } = {}) => {
     try {
       const remote = await listChildren();
       if (Array.isArray(remote) && remote.length > 0) {
@@ -99,16 +109,22 @@ const useStore = create((set, get) => ({
           initial: (c.name || '?')[0]?.toUpperCase() || '?',
           colorClass: COLOR_CLASSES[i % COLOR_CLASSES.length],
         }));
-        set({
+        const next = {
           kids,
           activeKidId: kids[0].id,
           hasMultipleKids: kids.length > 1,
           isOnboarded: true,
-          currentScreen: 'home',
-        });
+        };
+        // Only auto-navigate when called from a "bootstrap on app load" path —
+        // explicit auth/onboarding flows decide their own destination.
+        if (navigateOnLoad) next.currentScreen = 'home';
+        set(next);
+        return kids.length;
       }
+      return 0;
     } catch (err) {
       console.warn('[store] could not load kids from server:', err);
+      return 0;
     }
   },
 
@@ -119,12 +135,23 @@ const useStore = create((set, get) => ({
     const dietKey  = (form.diets && form.diets[0]) || 'vegetarian';
     const diet_type = DIET_MAP[dietKey] || 'Pure Veg';
 
+    // Free-text allergens were previously collected by the onboarding screen
+    // and then silently dropped here, so anything a parent typed ("mustard",
+    // "kiwi") was never checked against a product. Split on commas, trim, and
+    // merge with the tapped chips.
+    const extraAllergens = (form.allergiesOther || '')
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const allergies = [...new Set([...(form.allergies || []), ...extraAllergens])];
+
     const profile = {
       name: form.name || 'My Child',
       age_band,
       gender,
       diet_type,
-      allergies: form.allergies || [],
+      allergies,
       goals: [],
       cuisine: form.dietNotes || null,
     };
@@ -156,7 +183,15 @@ const useStore = create((set, get) => ({
     }
   },
 
-  setActiveKid: (id) => set({ activeKidId: id }),
+  // Switching kid: clear the local recentScans + selectedProduct so the
+  // previous kid's session data doesn't leak into the new kid's view.
+  // Server-side history will be re-fetched per kid on the home screen.
+  setActiveKid: (id) =>
+    set({
+      activeKidId: id,
+      recentScans: [],
+      selectedProduct: null,
+    }),
   getActiveKid: () => {
     const { kids, activeKidId } = get();
     return kids.find((k) => k.id === activeKidId) || kids[0] || null;
@@ -166,6 +201,21 @@ const useStore = create((set, get) => ({
   onboardForm: { name: '', age: '', gender: '', allergies: [], allergiesOther: '', diets: [], dietNotes: '' },
   updateOnboardForm: (partial) =>
     set((s) => ({ onboardForm: { ...s.onboardForm, ...partial } })),
+
+  // Toggling must read the CURRENT list, not one captured at render time.
+  // Two taps landing in the same React batch would otherwise both start from
+  // the same stale array and the second would overwrite the first — silently
+  // dropping an allergen, on the one field where that is least acceptable.
+  toggleOnboardAllergen: (id) =>
+    set((s) => {
+      const cur = s.onboardForm.allergies || [];
+      return {
+        onboardForm: {
+          ...s.onboardForm,
+          allergies: cur.includes(id) ? cur.filter((a) => a !== id) : [...cur, id],
+        },
+      };
+    }),
   resetOnboardForm: () =>
     set({ onboardForm: { name: '', age: '', gender: '', allergies: [], allergiesOther: '', diets: [], dietNotes: '' } }),
 
@@ -203,5 +253,13 @@ const useStore = create((set, get) => ({
     }),
   clearBotMessages: () => set({ botMessages: [] }),
 }));
+
+// Dev-only handle so screens can be driven straight from the browser console
+// without walking the whole auth + onboarding flow. Stripped from production
+// builds by Vite's dead-code elimination, since import.meta.env.DEV is a
+// compile-time constant.
+if (import.meta.env.DEV) {
+  window.__NOURI_STORE__ = useStore;
+}
 
 export default useStore;

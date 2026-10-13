@@ -1,43 +1,173 @@
-.home-greeting {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: 8px;
+.home-screen { background: transparent; }
+
+.home-header {
+  padding: 8px 24px 20px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
 }
-.home-hello {
+.home-greeting-block {
+  flex: 1;
+  min-width: 0;
+}
+.home-greeting-label {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.home-greeting-title {
   font-family: var(--serif);
-  font-size: 28px; font-weight: 400; color: var(--ink);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
-.home-child-name {
-  font-size: 14px; color: var(--ink-muted);
-  margin-top: 2px;
-  display: flex; align-items: center;
+.home-greeting-title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terracotta);
 }
-.scan-cards { display: flex; flex-direction: column; gap: 10px; }
-.scan-card {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px 16px;
-  background: var(--white);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-md);
+
+.switch-kid-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 5px 11px;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
   cursor: pointer;
-  transition: all 0.2s;
+}
+.switch-kid-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* "Quick check" label */
+.home-section-label {
+  padding: 0 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 18px 0 14px;
+}
+
+/* Scan card stack */
+.scan-cards {
+  padding: 0 24px;
+  display: flex; flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.scan-card {
+  padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1.5px solid var(--line);
+  background: var(--white);
 }
 .scan-card:hover {
   border-color: var(--terracotta);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
-.scan-card-emoji { font-size: 32px; flex-shrink: 0; }
-.scan-card-info { flex: 1; }
-.scan-card-title { font-size: 16px; font-weight: 600; color: var(--ink); }
-.scan-card-desc { font-size: 13px; color: var(--ink-muted); margin-top: 1px; }
-.scan-card-arrow { font-size: 20px; color: var(--ink-muted); flex-shrink: 0; }
+.scan-card.primary {
+  background: linear-gradient(135deg, var(--rust), var(--terracotta));
+  border-color: var(--rust);
+  color: var(--cream);
+  box-shadow: 0 8px 24px rgba(139, 58, 40, 0.22);
+}
+.scan-card.primary:hover {
+  border-color: var(--rust);
+  box-shadow: 0 12px 30px rgba(139, 58, 40, 0.30);
+}
+.scan-card-icon {
+  width: 50px; height: 50px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: rgba(216, 105, 74, 0.1);
+  color: var(--terracotta);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.scan-card.primary .scan-card-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--cream);
+}
+.scan-card-info { flex: 1; min-width: 0; }
+.scan-card-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+.scan-card-desc {
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.scan-card.primary .scan-card-desc { color: rgba(255, 255, 255, 0.8); }
+.scan-card-arrow {
+  font-size: 18px;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.scan-card.primary .scan-card-arrow { color: rgba(255, 255, 255, 0.7); }
+.scan-card-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  background: var(--butter);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 100px;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
 
+/* Recent scans */
+.recent-section { margin-top: 8px; padding: 0 24px 100px; }
+.recent-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px;
+}
+.recent-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.recent-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--terracotta);
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+.recent-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* Quick tip card */
 .tip-card {
   display: flex; align-items: flex-start; gap: 14px;
   padding: 18px;
   background: rgba(244, 216, 154, 0.2);
   border: 1px solid rgba(244, 216, 154, 0.5);
-  border-radius: var(--radius-md);
+  border-radius: 20px;
 }
 .tip-emoji { font-size: 28px; flex-shrink: 0; }
-.tip-text { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+.tip-text { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }

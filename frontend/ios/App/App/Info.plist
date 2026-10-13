@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>NouriScan</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+
+	<!-- armv7 is a 32-bit ARM capability that no supported iOS device has;
+	     leaving it in can affect device eligibility. arm64 is correct. -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+
+	<!-- Portrait only. The scan flows and the result layout are designed for
+	     one-handed portrait use in a supermarket aisle, and a rotated live
+	     scanner reticle would need separate design work to be usable. -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+
+	<!-- ═══════════════════════════════════════════════════════════════════
+	     Permission strings.
+
+	     These are shown verbatim in the iOS permission prompt. A missing
+	     string is an immediate crash on first camera access and an automatic
+	     App Store rejection; a vague string ("needs camera access") gets
+	     rejected under Guideline 5.1.1 for not explaining the use. Each one
+	     below names the specific feature and why it needs the hardware.
+	     ═══════════════════════════════════════════════════════════════════ -->
+
+	<key>NSCameraUsageDescription</key>
+	<string>NouriScan uses the camera to scan product barcodes and to photograph nutrition labels so it can read the ingredients and nutrients for your child's profile.</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>NouriScan lets you choose an existing photo of a nutrition label instead of taking a new one.</string>
+
+	<!-- The app never writes to the photo library; declared so the prompt is
+	     correct if a future save-to-photos feature is added. Remove if unused. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>NouriScan can save a scanned label photo to your library if you choose to keep it.</string>
+
+	<!-- App Transport Security: no exceptions. All API traffic goes to
+	     nouriscan.app / onrender.com over HTTPS, so ATS stays fully enforced.
+	     Adding NSAllowsArbitraryLoads here would trigger a review question. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+
+	<!-- Bundled web assets are served from capacitor://localhost. Declaring
+	     the app-bound domain, together with limitsNavigationsToAppBoundDomains
+	     in capacitor.config.json, prevents the webview from being navigated
+	     anywhere outside the app. -->
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>nouriscan.app</string>
+	</array>
+
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

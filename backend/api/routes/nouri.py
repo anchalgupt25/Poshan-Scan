@@ -23,6 +23,7 @@ from fastapi import APIRouter
 
 from ...db.database import get_db, fetch_one, decode_json_field
 from ...models.child import ChildProfile
+from .ownership import resolve_owner
 
 router = APIRouter(prefix="/nouri", tags=["nouri"])
 
@@ -66,7 +67,11 @@ async def nouri_chat(request: Request) -> dict:
     body = await request.json()
     req  = ChatRequest(body)
 
-    child = await _load_child(req.child_id)
+    owner = resolve_owner(
+        request.headers.get("authorization"),
+        request.headers.get("x-session-id"),
+    )
+    child = await _load_child(req.child_id, owner)
 
     # Greet sentinel  (__greet or __greet:flag)
     is_greet   = req.message.startswith("__greet")
@@ -134,12 +139,26 @@ async def _anthropic_response(
 # ─── Child loader ─────────────────────────────────────────────────────────────
 
 
-async def _load_child(child_id: int | None) -> ChildProfile | None:
+async def _load_child(child_id: int | None, owner=None) -> ChildProfile | None:
+    """Load the child whose profile seeds the bot's system prompt.
+
+    Scoped to `owner`: the profile's name and allergen list get injected into
+    the prompt, so an unscoped lookup would leak one family's child details
+    into another family's conversation.
+    """
     if not child_id:
         return None
     db = await get_db()
     try:
-        row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
+        if owner is not None:
+            pred, params = owner.where()
+            row = await fetch_one(
+                db,
+                f"SELECT * FROM children WHERE id = ? AND {pred}",
+                (child_id, *params),
+            )
+        else:
+            row = await fetch_one(db, "SELECT * FROM children WHERE id = ?", (child_id,))
         if not row:
             return None
         return ChildProfile(

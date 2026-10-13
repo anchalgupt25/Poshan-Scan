@@ -86,7 +86,9 @@ def _has_artificial_dyes(additives_tags: list[str]) -> bool:
 _SEARCH_URL = "https://world.openfoodfacts.org/api/v2/search"
 _PRODUCT_FIELDS = (
     "product_name,brands,categories,serving_size,serving_quantity,"
-    "nutriments,nova_group,additives_tags,ingredients_text,image_url,code"
+    "nutriments,nova_group,additives_tags,ingredients_text,image_url,code,"
+    # Curated allergen data — more reliable than parsing the ingredient string.
+    "allergens_tags,traces_tags"
 )
 
 
@@ -117,6 +119,8 @@ def _raw_to_product(p: dict, barcode: str | None = None) -> Product | None:
         data_source="open_food_facts",
         nutrition=nutrition,
         additives_tags=additives,
+        allergens_tags=p.get("allergens_tags") or [],
+        traces_tags=p.get("traces_tags") or [],
     )
 
 

@@ -48,6 +48,13 @@ class ProductBase(BaseModel):
 class Product(ProductBase):
     nutrition: NutritionFacts = Field(default_factory=NutritionFacts)
     additives_tags: list[str] = Field(default_factory=list)
+    # Curated allergen data from Open Food Facts, e.g. ["en:milk", "en:nuts"].
+    # Far more reliable than parsing the ingredient string, so allergen
+    # detection prefers these when present. Empty for USDA and OCR products.
+    allergens_tags: list[str] = Field(default_factory=list)
+    # Cross-contamination advisories ("may contain"), kept separate from
+    # allergens_tags because it's a different decision for a parent.
+    traces_tags: list[str] = Field(default_factory=list)
 
 
 class BarcodeRequest(BaseModel):

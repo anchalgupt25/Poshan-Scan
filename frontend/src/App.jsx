@@ -12,9 +12,14 @@ import ResultScreen from './components/result/ResultScreen';
 import BotScreen from './components/bot/BotScreen';
 import ProfileScreen from './components/profile/ProfileScreen';
 import KidSelector from './components/profile/KidSelector';
+import AdminScreen from './components/admin/AdminScreen';
+import HealthDisclaimer from './components/shared/HealthDisclaimer';
+import WakingBanner from './components/shared/WakingBanner';
+import { initNativeShell, rehydrateNativeStorage, isNative } from './utils/platform';
 
 const screens = {
   splash: SplashScreen,
+  auth: AuthScreen,
   onboard1: Onboard1,
   onboard2: Onboard2,
   onboard3: Onboard3,
@@ -25,31 +30,48 @@ const screens = {
   bot: BotScreen,
   profile: ProfileScreen,
   kidSelector: KidSelector,
+  admin: AdminScreen,
 };
+
+// Screens that don't require a signed-in user.
+const PUBLIC_SCREENS = new Set(['splash', 'auth']);
 
 export default function App() {
   const authChecked = useStore((s) => s.authChecked);
   const authToken = useStore((s) => s.authToken);
   const currentScreen = useStore((s) => s.currentScreen);
+  const navigate = useStore((s) => s.navigate);
   const bootstrapAuth = useStore((s) => s.bootstrapAuth);
   const loadKidsFromServer = useStore((s) => s.loadKidsFromServer);
 
-  // On mount: validate stored token (if any) against /auth/me
+  // On mount: validate stored token (if any). If valid, fetch kids so the
+  // returning user lands straight on home (or kid selector for multi-kid).
+  //
+  // On native we first rehydrate the session out of Capacitor Preferences,
+  // because iOS evicts WKWebView localStorage under storage pressure and that
+  // would otherwise sign the user out at random.
   useEffect(() => {
-    bootstrapAuth();
+    (async () => {
+      if (isNative()) {
+        await rehydrateNativeStorage(['nouri:auth-token', 'nouri:auth-email', 'nouri:session']);
+        initNativeShell();
+      }
+      bootstrapAuth();
+    })();
   }, [bootstrapAuth]);
 
-  // When auth becomes valid, load kids from the server
   useEffect(() => {
-    if (authToken) loadKidsFromServer();
+    if (authToken) {
+      loadKidsFromServer({ navigateOnLoad: true });
+    }
   }, [authToken, loadKidsFromServer]);
 
-  // While we're verifying a stored token, show a minimal splash to avoid
-  // the auth screen flashing on every page refresh
+  // While verifying a stored token, render a minimal splash to avoid a flicker
   if (!authChecked) {
     return (
       <div className="app-shell">
-        <div className="screen splash-screen">
+          <WakingBanner />
+      <div className="screen splash-screen">
           <div className="splash-content">
             <div className="splash-logo" style={{ animation: 'logoFloat 4s ease-in-out infinite' }}>🔬</div>
             <div className="splash-brand">Nouri<em>Scan</em></div>
@@ -59,20 +81,20 @@ export default function App() {
     );
   }
 
-  // Not signed in → auth screen only
-  if (!authToken) {
-    return (
-      <div className="app-shell">
-        <AuthScreen />
-      </div>
-    );
+  // Guard: if the user somehow lands on a protected screen without auth,
+  // bounce them back to splash. (Defensive — UI flows should not produce this.)
+  if (!authToken && !PUBLIC_SCREENS.has(currentScreen)) {
+    navigate('splash');
   }
 
-  // Signed in → normal screen routing
   const Screen = screens[currentScreen] || SplashScreen;
   return (
     <div className="app-shell">
       <Screen />
+      <WakingBanner />
+      {/* One-time "guidance, not medical advice" gate. Required for App Store
+          review of a child-nutrition app, and honest besides. */}
+      <HealthDisclaimer />
     </div>
   );
 }

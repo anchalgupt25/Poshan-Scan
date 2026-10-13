@@ -35,6 +35,62 @@
   content: ''; flex: 1; height: 1px; background: var(--line);
 }
 
+/* Barcode example panel — visually teaches users where to find the UPC */
+.barcode-example {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.barcode-example-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+.barcode-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.barcode-bars {
+  font-family: 'SF Mono', Menlo, monospace;
+  letter-spacing: -1px;
+  font-size: 24px;
+  color: var(--ink);
+  user-select: none;
+  line-height: 1;
+}
+.barcode-digits {
+  display: flex;
+  gap: 8px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.barcode-digit-edge {
+  background: rgba(216, 105, 74, 0.15);
+  border: 1.5px solid var(--terracotta);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 700;
+  color: var(--rust);
+}
+.barcode-example-note {
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
 .lookup-error {
   display: flex; flex-direction: column; align-items: center;
   text-align: center;
@@ -145,3 +201,32 @@ code {
 .result-card-info { flex: 1; min-width: 0; }
 .result-card-name { font-size: 15px; font-weight: 600; color: var(--ink); }
 .result-card-brand { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+/* ─── Native live-scan call to action ───
+   Shown in place of the web's "type the UPC" tip when running in the iOS app,
+   where a real ML Kit scanner is available. */
+.live-scan-cta {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 14px);
+  padding: 24px 20px;
+  text-align: center;
+}
+.live-scan-cta-icon {
+  font-size: 38px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.live-scan-cta-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.live-scan-cta-desc {
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  max-width: 34ch;
+  margin: 0 auto;
+}
